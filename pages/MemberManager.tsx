@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Member, UserRole, SubscriptionPlan } from '../types';
 import { Search, Plus, Edit2, Trash2, Filter, MoreVertical, X } from 'lucide-react';
+import { sendWelcomeEmail } from '../lib/emailService';
 
 interface MemberManagerProps {
   members: Member[];
@@ -27,7 +28,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     m.phone.includes(searchTerm)
   );
 
-  const handleAddMember = (e: React.FormEvent) => {
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     const id = Math.random().toString(36).substr(2, 9);
     const now = new Date();
@@ -44,6 +45,24 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
     setMembers(prev => [...prev, member]);
     logActivity('Register Member', `Created profile for ${member.fullName} (${member.plan})`, 'admin');
+    
+    // Send welcome email
+    if (member.email) {
+      const emailSent = await sendWelcomeEmail({
+        memberName: member.fullName,
+        memberEmail: member.email,
+        plan: member.plan,
+        startDate: member.startDate,
+        expiryDate: member.expiryDate
+      });
+      
+      if (emailSent) {
+        console.log(`Welcome email sent to ${member.email}`);
+      } else {
+        console.warn(`Failed to send welcome email to ${member.email}`);
+      }
+    }
+    
     setShowAddModal(false);
     setNewMember({ fullName: '', email: '', phone: '', plan: SubscriptionPlan.BASIC });
   };

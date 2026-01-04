@@ -1,0 +1,514 @@
+import { supabase } from './supabase';
+import { 
+  Member, 
+  StaffMember, 
+  PaymentRecord, 
+  Announcement, 
+  GalleryImage,
+  ActivityLog,
+  AttendanceRecord,
+  SubscriptionPlan,
+  PaymentMethod,
+  PaymentStatus,
+  UserRole
+} from '../types';
+
+// Members
+export const membersService = {
+  async getAll(): Promise<Member[]> {
+    const { data, error } = await supabase
+      .from('members')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching members:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapMemberFromDB);
+  },
+
+  async getById(id: string): Promise<Member | null> {
+    const { data, error } = await supabase
+      .from('members')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching member:', error);
+      return null;
+    }
+    
+    return data ? mapMemberFromDB(data) : null;
+  },
+
+  async create(member: Omit<Member, 'id'>): Promise<Member> {
+    const { data, error } = await supabase
+      .from('members')
+      .insert(mapMemberToDB(member))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating member:', error);
+      throw error;
+    }
+    
+    return mapMemberFromDB(data);
+  },
+
+  async update(id: string, updates: Partial<Member>): Promise<Member> {
+    const { data, error } = await supabase
+      .from('members')
+      .update({
+        ...mapMemberToDB(updates as Member),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating member:', error);
+      throw error;
+    }
+    
+    return mapMemberFromDB(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('members')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting member:', error);
+      throw error;
+    }
+  }
+};
+
+// Staff
+export const staffService = {
+  async getAll(): Promise<StaffMember[]> {
+    const { data, error } = await supabase
+      .from('staff')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching staff:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapStaffFromDB);
+  },
+
+  async getByEmail(email: string): Promise<StaffMember | null> {
+    const { data, error } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('email', email)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching staff:', error);
+      return null;
+    }
+    
+    return data ? mapStaffFromDB(data) : null;
+  }
+};
+
+// Payments
+export const paymentsService = {
+  async getAll(): Promise<PaymentRecord[]> {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching payments:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapPaymentFromDB);
+  },
+
+  async create(payment: Omit<PaymentRecord, 'id'>): Promise<PaymentRecord> {
+    const { data, error } = await supabase
+      .from('payments')
+      .insert(mapPaymentToDB(payment))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating payment:', error);
+      throw error;
+    }
+    
+    return mapPaymentFromDB(data);
+  },
+
+  async update(id: string, updates: Partial<PaymentRecord>): Promise<PaymentRecord> {
+    const { data, error } = await supabase
+      .from('payments')
+      .update({
+        ...mapPaymentToDB(updates as PaymentRecord),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating payment:', error);
+      throw error;
+    }
+    
+    return mapPaymentFromDB(data);
+  }
+};
+
+// Announcements
+export const announcementsService = {
+  async getAll(): Promise<Announcement[]> {
+    const { data, error } = await supabase
+      .from('announcements')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching announcements:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapAnnouncementFromDB);
+  },
+
+  async create(announcement: Omit<Announcement, 'id'>): Promise<Announcement> {
+    const { data, error } = await supabase
+      .from('announcements')
+      .insert(mapAnnouncementToDB(announcement))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating announcement:', error);
+      throw error;
+    }
+    
+    return mapAnnouncementFromDB(data);
+  },
+
+  async update(id: string, updates: Partial<Announcement>): Promise<Announcement> {
+    const { data, error } = await supabase
+      .from('announcements')
+      .update({
+        ...mapAnnouncementToDB(updates as Announcement),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating announcement:', error);
+      throw error;
+    }
+    
+    return mapAnnouncementFromDB(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('announcements')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting announcement:', error);
+      throw error;
+    }
+  }
+};
+
+// Gallery
+export const galleryService = {
+  async getAll(): Promise<GalleryImage[]> {
+    const { data, error } = await supabase
+      .from('gallery')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching gallery:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapGalleryFromDB);
+  },
+
+  async create(image: Omit<GalleryImage, 'id'>): Promise<GalleryImage> {
+    const { data, error } = await supabase
+      .from('gallery')
+      .insert(mapGalleryToDB(image))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating gallery image:', error);
+      throw error;
+    }
+    
+    return mapGalleryFromDB(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('gallery')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting gallery image:', error);
+      throw error;
+    }
+  }
+};
+
+// Activity Logs
+export const activityLogsService = {
+  async getAll(): Promise<ActivityLog[]> {
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .select('*')
+      .order('timestamp', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching activity logs:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapActivityLogFromDB);
+  },
+
+  async create(log: Omit<ActivityLog, 'id'>): Promise<ActivityLog> {
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .insert(mapActivityLogToDB(log))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating activity log:', error);
+      throw error;
+    }
+    
+    return mapActivityLogFromDB(data);
+  }
+};
+
+// Attendance Records
+export const attendanceService = {
+  async getAll(): Promise<AttendanceRecord[]> {
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching attendance records:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapAttendanceFromDB);
+  },
+
+  async create(record: Omit<AttendanceRecord, 'id'>): Promise<AttendanceRecord> {
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .insert(mapAttendanceToDB(record))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating attendance record:', error);
+      throw error;
+    }
+    
+    return mapAttendanceFromDB(data);
+  },
+
+  async update(id: string, updates: Partial<AttendanceRecord>): Promise<AttendanceRecord> {
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .update(mapAttendanceToDB(updates as AttendanceRecord))
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating attendance record:', error);
+      throw error;
+    }
+    
+    return mapAttendanceFromDB(data);
+  }
+};
+
+// Mapper functions to convert between DB format and app format
+function mapMemberFromDB(db: any): Member {
+  return {
+    id: db.id,
+    fullName: db.full_name,
+    email: db.email,
+    phone: db.phone,
+    address: db.address,
+    emergencyContact: db.emergency_contact,
+    plan: db.plan as SubscriptionPlan,
+    startDate: db.start_date,
+    expiryDate: db.expiry_date,
+    status: db.status
+  };
+}
+
+function mapMemberToDB(member: Partial<Member>): any {
+  const db: any = {};
+  if (member.fullName !== undefined) db.full_name = member.fullName;
+  if (member.email !== undefined) db.email = member.email;
+  if (member.phone !== undefined) db.phone = member.phone;
+  if (member.address !== undefined) db.address = member.address;
+  if (member.emergencyContact !== undefined) db.emergency_contact = member.emergencyContact;
+  if (member.plan !== undefined) db.plan = member.plan;
+  if (member.startDate !== undefined) db.start_date = member.startDate;
+  if (member.expiryDate !== undefined) db.expiry_date = member.expiryDate;
+  if (member.status !== undefined) db.status = member.status;
+  return db;
+}
+
+function mapStaffFromDB(db: any): StaffMember {
+  return {
+    id: db.id,
+    fullName: db.full_name,
+    email: db.email,
+    role: db.role as UserRole,
+    position: db.position,
+    phone: db.phone,
+    avatar: db.avatar
+  };
+}
+
+function mapPaymentFromDB(db: any): PaymentRecord {
+  return {
+    id: db.id,
+    memberId: db.member_id,
+    memberName: db.member_name,
+    amount: db.amount,
+    date: db.date,
+    method: db.method as PaymentMethod,
+    status: db.status as PaymentStatus,
+    confirmedBy: db.confirmed_by,
+    transactionId: db.transaction_id,
+    momoPhone: db.momo_phone,
+    network: db.network
+  };
+}
+
+function mapPaymentToDB(payment: Partial<PaymentRecord>): any {
+  const db: any = {};
+  if (payment.memberId !== undefined) db.member_id = payment.memberId;
+  if (payment.memberName !== undefined) db.member_name = payment.memberName;
+  if (payment.amount !== undefined) db.amount = payment.amount;
+  if (payment.date !== undefined) db.date = payment.date;
+  if (payment.method !== undefined) db.method = payment.method;
+  if (payment.status !== undefined) db.status = payment.status;
+  if (payment.confirmedBy !== undefined) db.confirmed_by = payment.confirmedBy;
+  if (payment.transactionId !== undefined) db.transaction_id = payment.transactionId;
+  if (payment.momoPhone !== undefined) db.momo_phone = payment.momoPhone;
+  if (payment.network !== undefined) db.network = payment.network;
+  return db;
+}
+
+function mapAnnouncementFromDB(db: any): Announcement {
+  return {
+    id: db.id,
+    title: db.title,
+    content: db.content,
+    date: db.date,
+    priority: db.priority
+  };
+}
+
+function mapAnnouncementToDB(announcement: Partial<Announcement>): any {
+  const db: any = {};
+  if (announcement.title !== undefined) db.title = announcement.title;
+  if (announcement.content !== undefined) db.content = announcement.content;
+  if (announcement.date !== undefined) db.date = announcement.date;
+  if (announcement.priority !== undefined) db.priority = announcement.priority;
+  return db;
+}
+
+function mapGalleryFromDB(db: any): GalleryImage {
+  return {
+    id: db.id,
+    url: db.url,
+    caption: db.caption
+  };
+}
+
+function mapGalleryToDB(image: Partial<GalleryImage>): any {
+  const db: any = {};
+  if (image.url !== undefined) db.url = image.url;
+  if (image.caption !== undefined) db.caption = image.caption;
+  return db;
+}
+
+function mapActivityLogFromDB(db: any): ActivityLog {
+  return {
+    id: db.id,
+    userRole: db.user_role as UserRole,
+    userEmail: db.user_email,
+    action: db.action,
+    details: db.details,
+    timestamp: db.timestamp,
+    category: db.category
+  };
+}
+
+function mapActivityLogToDB(log: Partial<ActivityLog>): any {
+  const db: any = {};
+  if (log.userRole !== undefined) db.user_role = log.userRole;
+  if (log.userEmail !== undefined) db.user_email = log.userEmail;
+  if (log.action !== undefined) db.action = log.action;
+  if (log.details !== undefined) db.details = log.details;
+  if (log.timestamp !== undefined) db.timestamp = log.timestamp;
+  if (log.category !== undefined) db.category = log.category;
+  return db;
+}
+
+function mapAttendanceFromDB(db: any): AttendanceRecord {
+  return {
+    id: db.id,
+    staffEmail: db.staff_email,
+    staffRole: db.staff_role as UserRole,
+    date: db.date,
+    signInTime: db.sign_in_time,
+    signOutTime: db.sign_out_time
+  };
+}
+
+function mapAttendanceToDB(record: Partial<AttendanceRecord>): any {
+  const db: any = {};
+  if (record.staffEmail !== undefined) db.staff_email = record.staffEmail;
+  if (record.staffRole !== undefined) db.staff_role = record.staffRole;
+  if (record.date !== undefined) db.date = record.date;
+  if (record.signInTime !== undefined) db.sign_in_time = record.signInTime;
+  if (record.signOutTime !== undefined) db.sign_out_time = record.signOutTime;
+  return db;
+}
+

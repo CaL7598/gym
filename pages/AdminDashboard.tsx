@@ -11,7 +11,11 @@ import {
   Activity,
   MapPin,
   Clock,
-  User as UserIcon
+  User as UserIcon,
+  Calendar,
+  Search,
+  DollarSign,
+  Filter
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -20,7 +24,9 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer
+  ResponsiveContainer,
+  LineChart,
+  Line
 } from 'recharts';
 import { generateSummary } from '../geminiService';
 
@@ -36,6 +42,9 @@ interface DashboardProps {
 const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, staff, attendanceRecords, activityLogs }) => {
   const [aiSummary, setAiSummary] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [revenuePeriod, setRevenuePeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
+  const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
+  const [showCustomRange, setShowCustomRange] = useState(false);
 
   const stats = useMemo(() => {
     const activeCount = members.filter(m => m.status === 'active').length;
@@ -60,11 +69,107 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
     { name: 'Expired', value: stats.expired },
   ], [stats]);
 
+  // Revenue Analytics Calculations
+  const revenueData = useMemo(() => {
+    const confirmedPayments = payments.filter(p => p.status === 'Confirmed');
+    const now = new Date();
+    
+    let filteredPayments: PaymentRecord[] = [];
+    let periodLabel = '';
+    
+    if (showCustomRange && customDateRange.start && customDateRange.end) {
+      // Custom date range
+      filteredPayments = confirmedPayments.filter(p => {
+        const paymentDate = new Date(p.date);
+        const start = new Date(customDateRange.start);
+        const end = new Date(customDateRange.end);
+        end.setHours(23, 59, 59, 999);
+        return paymentDate >= start && paymentDate <= end;
+      });
+      periodLabel = `${customDateRange.start} to ${customDateRange.end}`;
+    } else {
+      // Predefined periods
+      switch (revenuePeriod) {
+        case 'day':
+          const today = now.toISOString().split('T')[0];
+          filteredPayments = confirmedPayments.filter(p => p.date === today);
+          periodLabel = 'Today';
+          break;
+        case 'week':
+          const weekAgo = new Date(now);
+          weekAgo.setDate(now.getDate() - 7);
+          filteredPayments = confirmedPayments.filter(p => {
+            const paymentDate = new Date(p.date);
+            return paymentDate >= weekAgo;
+          });
+          periodLabel = 'Last 7 Days';
+          break;
+        case 'month':
+          const monthAgo = new Date(now);
+          monthAgo.setMonth(now.getMonth() - 1);
+          filteredPayments = confirmedPayments.filter(p => {
+            const paymentDate = new Date(p.date);
+            return paymentDate >= monthAgo;
+          });
+          periodLabel = 'Last 30 Days';
+          break;
+        case 'year':
+          const yearAgo = new Date(now);
+          yearAgo.setFullYear(now.getFullYear() - 1);
+          filteredPayments = confirmedPayments.filter(p => {
+            const paymentDate = new Date(p.date);
+            return paymentDate >= yearAgo;
+          });
+          periodLabel = 'Last 12 Months';
+          break;
+      }
+    }
+
+    const totalRevenue = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
+    const cashRevenue = filteredPayments.filter(p => p.method === 'Cash').reduce((sum, p) => sum + p.amount, 0);
+    const momoRevenue = filteredPayments.filter(p => p.method === 'Mobile Money').reduce((sum, p) => sum + p.amount, 0);
+    const transactionCount = filteredPayments.length;
+
+    // Daily breakdown for chart
+    const dailyBreakdown = filteredPayments.reduce((acc, payment) => {
+      const date = payment.date;
+      if (!acc[date]) {
+        acc[date] = 0;
+      }
+      acc[date] += payment.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const chartData = Object.entries(dailyBreakdown)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, amount]) => ({
+        date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        amount: amount,
+        fullDate: date
+      }));
+
+    return {
+      totalRevenue,
+      cashRevenue,
+      momoRevenue,
+      transactionCount,
+      periodLabel,
+      chartData,
+      payments: filteredPayments
+    };
+  }, [payments, revenuePeriod, customDateRange, showCustomRange]);
+
   const handleAiInsights = async () => {
     setIsGenerating(true);
-    const summary = await generateSummary(stats);
-    setAiSummary(summary);
-    setIsGenerating(false);
+    try {
+      const summary = await generateSummary(stats);
+      setAiSummary(summary);
+    } catch (error) {
+      console.error('Error generating AI insights:', error);
+      setAiSummary('Failed to generate insights. Please check your Gemini API key configuration.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // Helper to determine staff status
@@ -98,6 +203,170 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
           {isGenerating ? 'Analyzing...' : 'AI Insights'}
         </button>
       </div>
+
+      {/* Revenue Analytics Section - Super Admin Only */}
+      {role === UserRole.SUPER_ADMIN && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <DollarSign size={24} className="text-rose-600" />
+                Revenue Analytics
+              </h3>
+              <p className="text-sm text-slate-500 mt-1">Track revenue across different time periods</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowCustomRange(!showCustomRange)}
+                className="flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                <Calendar size={16} />
+                Custom Range
+              </button>
+            </div>
+          </div>
+
+          {/* Custom Date Range Picker */}
+          {showCustomRange && (
+            <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={customDateRange.start}
+                    onChange={e => setCustomDateRange({...customDateRange, start: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    value={customDateRange.end}
+                    onChange={e => setCustomDateRange({...customDateRange, end: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                  />
+                </div>
+              </div>
+              {(customDateRange.start || customDateRange.end) && (
+                <button
+                  onClick={() => {
+                    setCustomDateRange({ start: '', end: '' });
+                    setShowCustomRange(false);
+                  }}
+                  className="mt-3 text-xs text-rose-600 hover:text-rose-700 font-medium"
+                >
+                  Clear custom range
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Period Selector */}
+          {!showCustomRange && (
+            <div className="flex gap-2 mb-6">
+              {(['day', 'week', 'month', 'year'] as const).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setRevenuePeriod(period)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    revenuePeriod === period
+                      ? 'bg-rose-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {period.charAt(0).toUpperCase() + period.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Revenue Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gradient-to-br from-rose-50 to-rose-100 p-4 rounded-xl border border-rose-200">
+              <p className="text-xs font-semibold text-rose-700 uppercase tracking-wider mb-1">Total Revenue</p>
+              <p className="text-2xl font-bold text-rose-900">₵{revenueData.totalRevenue.toLocaleString()}</p>
+              <p className="text-xs text-rose-600 mt-1">{revenueData.periodLabel}</p>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-1">Cash Payments</p>
+              <p className="text-2xl font-bold text-blue-900">₵{revenueData.cashRevenue.toLocaleString()}</p>
+              <p className="text-xs text-blue-600 mt-1">
+                {revenueData.totalRevenue > 0 
+                  ? `${((revenueData.cashRevenue / revenueData.totalRevenue) * 100).toFixed(1)}%`
+                  : '0%'} of total
+              </p>
+            </div>
+            <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1">Mobile Money</p>
+              <p className="text-2xl font-bold text-emerald-900">₵{revenueData.momoRevenue.toLocaleString()}</p>
+              <p className="text-xs text-emerald-600 mt-1">
+                {revenueData.totalRevenue > 0 
+                  ? `${((revenueData.momoRevenue / revenueData.totalRevenue) * 100).toFixed(1)}%`
+                  : '0%'} of total
+              </p>
+            </div>
+            <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Transactions</p>
+              <p className="text-2xl font-bold text-amber-900">{revenueData.transactionCount}</p>
+              <p className="text-xs text-amber-600 mt-1">
+                {revenueData.transactionCount > 0 
+                  ? `₵${(revenueData.totalRevenue / revenueData.transactionCount).toFixed(0)} avg`
+                  : 'No transactions'}
+              </p>
+            </div>
+          </div>
+
+          {/* Revenue Chart */}
+          {revenueData.chartData.length > 0 ? (
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <h4 className="text-sm font-bold text-slate-700 mb-4">Daily Revenue Breakdown</h4>
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={revenueData.chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis 
+                      dataKey="date" 
+                      axisLine={false} 
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                      tickFormatter={(value) => `₵${(value / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        borderRadius: '8px', 
+                        border: 'none', 
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        backgroundColor: 'white'
+                      }}
+                      formatter={(value: number) => [`₵${value.toLocaleString()}`, 'Revenue']}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="amount" 
+                      stroke="#e11d48" 
+                      strokeWidth={2}
+                      dot={{ fill: '#e11d48', r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-50 p-8 rounded-xl border border-slate-200 text-center">
+              <CreditCard size={48} className="mx-auto text-slate-400 mb-3" />
+              <p className="text-slate-500 text-sm">No revenue data for the selected period</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

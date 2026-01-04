@@ -1,42 +1,111 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Member } from '../types';
-import { Send, Sparkles, MessageSquare, Mail, History } from 'lucide-react';
+import { Send, Sparkles, MessageSquare, Mail, History, Users, CheckSquare, Square } from 'lucide-react';
 import { generateCommunication } from '../geminiService';
 
 const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
+  const [sendMode, setSendMode] = useState<'single' | 'broadcast'>('single');
   const [selectedMemberId, setSelectedMemberId] = useState('');
-  const [msgType, setMsgType] = useState<'welcome' | 'reminder' | 'expiry'>('reminder');
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const [msgType, setMsgType] = useState<'welcome' | 'reminder' | 'expiry' | 'general'>('reminder');
   const [message, setMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
 
   const selectedMember = members.find(m => m.id === selectedMemberId);
 
+  // Handle select all toggle
+  const handleSelectAll = (checked: boolean) => {
+    setSelectAll(checked);
+    if (checked) {
+      setSelectedMemberIds(new Set(members.map(m => m.id)));
+    } else {
+      setSelectedMemberIds(new Set());
+    }
+  };
+
+  // Handle individual member selection
+  const handleMemberToggle = (memberId: string) => {
+    const newSelection = new Set(selectedMemberIds);
+    if (newSelection.has(memberId)) {
+      newSelection.delete(memberId);
+      setSelectAll(false);
+    } else {
+      newSelection.add(memberId);
+      // Auto-select "select all" if all members are selected
+      if (newSelection.size === members.length) {
+        setSelectAll(true);
+      }
+    }
+    setSelectedMemberIds(newSelection);
+  };
+
   const handleAiDraft = async () => {
-    if (!selectedMember) {
+    if (sendMode === 'single' && !selectedMember) {
       alert("Please select a member first.");
       return;
     }
     setIsGenerating(true);
-    const draft = await generateCommunication(msgType, selectedMember.fullName, selectedMember.plan, selectedMember.expiryDate);
-    setMessage(draft);
+    
+    if (sendMode === 'single' && selectedMember) {
+      const draft = await generateCommunication(msgType, selectedMember.fullName, selectedMember.plan, selectedMember.expiryDate);
+      setMessage(draft);
+    } else {
+      // For broadcast, generate a general message
+      const draft = await generateCommunication('general', 'All Members', 'All Plans', '');
+      setMessage(draft);
+    }
     setIsGenerating(false);
   };
 
   const handleSend = () => {
-    if (!message || !selectedMember) return;
-    const newEntry = {
-      id: Date.now(),
-      to: selectedMember.fullName,
-      type: msgType,
-      date: new Date().toLocaleString(),
-      preview: message.substring(0, 60) + '...'
-    };
-    setHistory([newEntry, ...history]);
-    setMessage('');
-    alert(`Message sent to ${selectedMember.fullName}`);
+    if (!message) return;
+
+    if (sendMode === 'single') {
+      if (!selectedMember) return;
+      const newEntry = {
+        id: Date.now(),
+        to: selectedMember.fullName,
+        type: msgType,
+        date: new Date().toLocaleString(),
+        preview: message.substring(0, 60) + '...',
+        mode: 'single'
+      };
+      setHistory([newEntry, ...history]);
+      setMessage('');
+      alert(`Message sent to ${selectedMember.fullName}`);
+    } else {
+      // Broadcast mode
+      if (selectedMemberIds.size === 0 && !selectAll) {
+        alert("Please select at least one member or select all members.");
+        return;
+      }
+
+      const recipients = selectAll ? members : members.filter(m => selectedMemberIds.has(m.id));
+      const recipientNames = recipients.map(m => m.fullName).join(', ');
+      
+      const newEntry = {
+        id: Date.now(),
+        to: selectAll ? `All Members (${members.length})` : `${recipients.length} Members`,
+        type: msgType,
+        date: new Date().toLocaleString(),
+        preview: message.substring(0, 60) + '...',
+        mode: 'broadcast',
+        recipients: recipientNames
+      };
+      setHistory([newEntry, ...history]);
+      setMessage('');
+      setSelectedMemberIds(new Set());
+      setSelectAll(false);
+      alert(`Message sent to ${selectAll ? `all ${members.length} members` : `${recipients.length} selected members`}`);
+    }
   };
+
+  const selectedCount = useMemo(() => {
+    return selectAll ? members.length : selectedMemberIds.size;
+  }, [selectAll, selectedMemberIds, members.length]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -47,33 +116,129 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Recipient</label>
-              <select 
-                className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 outline-none"
-                value={selectedMemberId}
-                onChange={e => setSelectedMemberId(e.target.value)}
+          {/* Send Mode Toggle */}
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Send Mode</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setSendMode('single');
+                  setSelectedMemberIds(new Set());
+                  setSelectAll(false);
+                }}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  sendMode === 'single'
+                    ? 'bg-rose-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
               >
-                <option value="">Select Member</option>
-                {members.map(m => (
-                  <option key={m.id} value={m.id}>{m.fullName}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Context</label>
-              <select 
-                className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 outline-none"
-                value={msgType}
-                onChange={e => setMsgType(e.target.value as any)}
+                Single Member
+              </button>
+              <button
+                onClick={() => {
+                  setSendMode('broadcast');
+                  setSelectedMemberId('');
+                }}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                  sendMode === 'broadcast'
+                    ? 'bg-rose-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
               >
-                <option value="welcome">Welcome Onboard</option>
-                <option value="reminder">Subscription Reminder</option>
-                <option value="expiry">Notification of Expiry</option>
-              </select>
+                <Users size={16} />
+                Broadcast
+              </button>
             </div>
           </div>
+
+          {sendMode === 'single' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Recipient</label>
+                <select 
+                  className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                  value={selectedMemberId}
+                  onChange={e => setSelectedMemberId(e.target.value)}
+                >
+                  <option value="">Select Member</option>
+                  {members.map(m => (
+                    <option key={m.id} value={m.id}>{m.fullName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Context</label>
+                <select 
+                  className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                  value={msgType}
+                  onChange={e => setMsgType(e.target.value as any)}
+                >
+                  <option value="welcome">Welcome Onboard</option>
+                  <option value="reminder">Subscription Reminder</option>
+                  <option value="expiry">Notification of Expiry</option>
+                  <option value="general">General Message</option>
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Message Context</label>
+                <select 
+                  className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                  value={msgType}
+                  onChange={e => setMsgType(e.target.value as any)}
+                >
+                  <option value="welcome">Welcome Onboard</option>
+                  <option value="reminder">Subscription Reminder</option>
+                  <option value="expiry">Notification of Expiry</option>
+                  <option value="general">General Announcement</option>
+                </select>
+              </div>
+              
+              <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 max-h-64 overflow-y-auto">
+                <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-200">
+                  <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
+                    <button
+                      onClick={() => handleSelectAll(!selectAll)}
+                      className="flex items-center gap-2 hover:text-rose-600 transition-colors"
+                    >
+                      {selectAll ? (
+                        <CheckSquare size={18} className="text-rose-600" />
+                      ) : (
+                        <Square size={18} className="text-slate-400" />
+                      )}
+                      <span>Select All Members</span>
+                    </button>
+                  </label>
+                  <span className="text-xs font-bold text-slate-500">
+                    {selectedCount} of {members.length} selected
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {members.map(member => (
+                    <label
+                      key={member.id}
+                      className="flex items-center gap-2 p-2 rounded hover:bg-white cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectAll || selectedMemberIds.has(member.id)}
+                        onChange={() => {
+                          if (!selectAll) {
+                            handleMemberToggle(member.id);
+                          }
+                        }}
+                        className="w-4 h-4 text-rose-600 border-slate-300 rounded focus:ring-rose-500"
+                      />
+                      <span className="text-sm text-slate-700 flex-1">{member.fullName}</span>
+                      <span className="text-xs text-slate-400">{member.plan}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="relative">
             <textarea 
@@ -95,11 +260,18 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
           <div className="flex gap-4">
             <button 
               onClick={handleSend}
-              disabled={!message || !selectedMemberId}
-              className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-rose-700 shadow-md transition-colors disabled:opacity-50"
+              disabled={
+                !message || 
+                (sendMode === 'single' && !selectedMemberId) ||
+                (sendMode === 'broadcast' && selectedCount === 0)
+              }
+              className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-rose-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send size={18} />
-              Send Message
+              {sendMode === 'broadcast' 
+                ? `Send to ${selectedCount > 0 ? selectedCount : 'Members'}`
+                : 'Send Message'
+              }
             </button>
           </div>
         </div>
@@ -114,14 +286,23 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
           {history.length > 0 ? (
             history.map(entry => (
               <div key={entry.id} className="p-4 flex items-start justify-between group hover:bg-white transition-colors">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-bold text-slate-900">{entry.to}</span>
                     <span className="text-[10px] px-2 py-0.5 bg-slate-200 rounded-full font-bold text-slate-500 uppercase">{entry.type}</span>
+                    {entry.mode === 'broadcast' && (
+                      <span className="text-[10px] px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full font-bold flex items-center gap-1">
+                        <Users size={10} />
+                        Broadcast
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-slate-500 line-clamp-1">{entry.preview}</p>
+                  {entry.recipients && (
+                    <p className="text-[10px] text-slate-400 mt-1">Recipients: {entry.recipients.substring(0, 100)}{entry.recipients.length > 100 ? '...' : ''}</p>
+                  )}
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium">{entry.date}</span>
+                <span className="text-[10px] text-slate-400 font-medium ml-2">{entry.date}</span>
               </div>
             ))
           ) : (

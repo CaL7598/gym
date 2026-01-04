@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { PaymentRecord, UserRole, Member, PaymentMethod, PaymentStatus } from '../types';
 import { CreditCard, Smartphone, CheckCircle, Search, Filter, History, X } from 'lucide-react';
+import { sendPaymentEmail } from '../lib/emailService';
 
 interface PaymentProcessorProps {
   payments: PaymentRecord[];
@@ -20,14 +21,40 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
     method: PaymentMethod.CASH,
     status: PaymentStatus.CONFIRMED
   });
+  const [momoDetails, setMomoDetails] = useState({
+    transactionId: '',
+    momoPhone: '',
+    network: ''
+  });
 
-  const handleConfirmPayment = (id: string) => {
+  const handleConfirmPayment = async (id: string) => {
     const pay = payments.find(p => p.id === id);
+    if (!pay) return;
+    
     setPayments(prev => prev.map(p => p.id === id ? { ...p, status: PaymentStatus.CONFIRMED, confirmedBy: 'Staff' } : p));
-    logActivity('Confirm Payment', `Verified ${pay?.method} payment of ₵${pay?.amount} for ${pay?.memberName}`, 'financial');
+    logActivity('Confirm Payment', `Verified ${pay.method} payment of ₵${pay.amount} for ${pay.memberName}`, 'financial');
+    
+    // Send payment confirmation email
+    const member = members.find(m => m.id === pay.memberId);
+    if (member && member.email) {
+      const emailSent = await sendPaymentEmail({
+        memberName: pay.memberName,
+        memberEmail: member.email,
+        amount: pay.amount,
+        paymentMethod: pay.method,
+        paymentDate: pay.date,
+        transactionId: pay.transactionId
+      });
+      
+      if (emailSent) {
+        console.log(`Payment confirmation email sent to ${member.email}`);
+      } else {
+        console.warn(`Failed to send payment email to ${member.email}`);
+      }
+    }
   };
 
-  const handleRecordPayment = (e: React.FormEvent) => {
+  const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     const member = members.find(m => m.id === newPay.memberId);
     if (!member) return;
@@ -41,11 +68,47 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
       method: newPay.method as PaymentMethod,
       status: newPay.method === PaymentMethod.CASH ? PaymentStatus.CONFIRMED : PaymentStatus.PENDING,
       confirmedBy: newPay.method === PaymentMethod.CASH ? 'Staff' : undefined,
-      ...newPay
-    } as any;
+      // Include mobile money details if method is Mobile Money
+      ...(newPay.method === PaymentMethod.MOMO && {
+        transactionId: momoDetails.transactionId || undefined,
+        momoPhone: momoDetails.momoPhone || undefined,
+        network: momoDetails.network || undefined
+      })
+    };
 
     setPayments(prev => [payment, ...prev]);
     logActivity('Record Payment', `Logged ₵${payment.amount} ${payment.method} entry for ${member.fullName}`, 'financial');
+    
+    // Send payment confirmation email if payment is confirmed (Cash payments)
+    if (payment.status === PaymentStatus.CONFIRMED && member.email) {
+      const emailSent = await sendPaymentEmail({
+        memberName: payment.memberName,
+        memberEmail: member.email,
+        amount: payment.amount,
+        paymentMethod: payment.method,
+        paymentDate: payment.date,
+        transactionId: payment.transactionId
+      });
+      
+      if (emailSent) {
+        console.log(`Payment confirmation email sent to ${member.email}`);
+      } else {
+        console.warn(`Failed to send payment email to ${member.email}`);
+      }
+    }
+    
+    // Reset form
+    setNewPay({
+      memberId: '',
+      amount: 0,
+      method: PaymentMethod.CASH,
+      status: PaymentStatus.CONFIRMED
+    });
+    setMomoDetails({
+      transactionId: '',
+      momoPhone: '',
+      network: ''
+    });
     setShowPayModal(false);
   };
 
@@ -103,7 +166,12 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
                           </div>
                           <div>
                             <div className="text-xs font-bold text-slate-900">{payment.method}</div>
-                            <div className="text-[10px] text-slate-400">{payment.date} • {payment.transactionId || 'N/A'}</div>
+                            <div className="text-[10px] text-slate-400">
+                              {payment.date}
+                              {payment.transactionId && ` • ${payment.transactionId}`}
+                              {payment.momoPhone && ` • ${payment.momoPhone}`}
+                              {payment.network && ` (${payment.network})`}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -147,7 +215,24 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
              <div className="flex items-center justify-between p-6 border-b bg-slate-900 text-white">
               <h3 className="text-lg font-bold">Record Payment</h3>
-              <button onClick={() => setShowPayModal(false)} className="hover:text-rose-400">
+              <button 
+                onClick={() => {
+                  setShowPayModal(false);
+                  // Reset form when closing
+                  setNewPay({
+                    memberId: '',
+                    amount: 0,
+                    method: PaymentMethod.CASH,
+                    status: PaymentStatus.CONFIRMED
+                  });
+                  setMomoDetails({
+                    transactionId: '',
+                    momoPhone: '',
+                    network: ''
+                  });
+                }} 
+                className="hover:text-rose-400"
+              >
                 <X size={24} />
               </button>
             </div>
@@ -189,10 +274,42 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
 
                 {newPay.method === PaymentMethod.MOMO && (
                   <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase">MOMO Details</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">Mobile Money Details</p>
                     <div className="grid grid-cols-2 gap-3">
-                      <input placeholder="Tx ID" className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm" />
-                      <input placeholder="Sender Phone" className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm" />
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Transaction ID</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g., TX123456"
+                          value={momoDetails.transactionId}
+                          onChange={e => setMomoDetails({...momoDetails, transactionId: e.target.value})}
+                          className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Sender Phone</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g., 0244123456"
+                          value={momoDetails.momoPhone}
+                          onChange={e => setMomoDetails({...momoDetails, momoPhone: e.target.value})}
+                          className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Network</label>
+                      <select
+                        value={momoDetails.network}
+                        onChange={e => setMomoDetails({...momoDetails, network: e.target.value})}
+                        className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                      >
+                        <option value="">-- Select Network --</option>
+                        <option value="MTN">MTN</option>
+                        <option value="Vodafone">Vodafone</option>
+                        <option value="Telecel">Telecel</option>
+                        <option value="AirtelTigo">AirtelTigo</option>
+                      </select>
                     </div>
                   </div>
                 )}
