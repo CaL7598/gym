@@ -40,6 +40,7 @@ import Gallery from './pages/Gallery';
 import Announcements from './pages/Announcements';
 import Contact from './pages/Contact';
 import MembershipPlans from './pages/MembershipPlans';
+import Checkout from './pages/Checkout';
 import AdminDashboard from './pages/AdminDashboard';
 import MemberManager from './pages/MemberManager';
 import PaymentProcessor from './pages/PaymentProcessor';
@@ -49,12 +50,19 @@ import ContentManager from './pages/ContentManager';
 import AdminLogin from './pages/AdminLogin';
 import ActivityLogs from './pages/ActivityLogs';
 import AttendanceManager from './pages/AttendanceManager';
+import PrivilegeManager from './pages/PrivilegeManager';
 
 const App: React.FC = () => {
-  const [userRole, setUserRole] = useState<UserRole>(UserRole.PUBLIC);
-  const [userEmail, setUserEmail] = useState<string>('');
-  const [currentPage, setCurrentPage] = useState<string>('home');
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  // Initialize state from localStorage if available
+  const getInitialUserRole = (): UserRole => {
+    const saved = localStorage.getItem('userRole') as UserRole | null;
+    return (saved === UserRole.STAFF || saved === UserRole.SUPER_ADMIN) ? saved : UserRole.PUBLIC;
+  };
+  
+  const [userRole, setUserRole] = useState<UserRole>(getInitialUserRole());
+  const [userEmail, setUserEmail] = useState<string>(localStorage.getItem('userEmail') || '');
+  const [currentPage, setCurrentPage] = useState<string>(localStorage.getItem('currentPage') || 'home');
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(localStorage.getItem('isAdminLoggedIn') === 'true');
   const [isLoading, setIsLoading] = useState(true);
   const [useSupabase, setUseSupabase] = useState(false);
   
@@ -66,6 +74,26 @@ const App: React.FC = () => {
   const [gallery, setGallery] = useState<GalleryImage[]>(INITIAL_GALLERY as GalleryImage[]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+
+  // Save authentication state to localStorage whenever it changes
+  useEffect(() => {
+    if (userRole === UserRole.STAFF || userRole === UserRole.SUPER_ADMIN) {
+      localStorage.setItem('userRole', userRole);
+      localStorage.setItem('userEmail', userEmail);
+      localStorage.setItem('isAdminLoggedIn', String(isAdminLoggedIn));
+      localStorage.setItem('currentPage', currentPage);
+    } else {
+      // Clear auth data when logged out
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('isAdminLoggedIn');
+    }
+  }, [userRole, userEmail, isAdminLoggedIn, currentPage]);
+
+  // Save current page to localStorage whenever it changes (for both public and admin)
+  useEffect(() => {
+    localStorage.setItem('currentPage', currentPage);
+  }, [currentPage]);
 
   // Check if Supabase is configured and load data
   useEffect(() => {
@@ -282,12 +310,32 @@ const App: React.FC = () => {
         case 'gallery': return <Gallery gallery={gallery} />;
         case 'announcements': return <Announcements announcements={announcements} />;
         case 'contact': return <Contact />;
-        case 'plans': return <MembershipPlans />;
+        case 'plans': return <MembershipPlans setCurrentPage={setCurrentPage} />;
+        case 'checkout': {
+          const storedPlan = sessionStorage.getItem('selectedPlan');
+          const selectedPlan = storedPlan ? JSON.parse(storedPlan) : null;
+          return (
+            <Checkout
+              selectedPlan={selectedPlan}
+              onBack={() => setCurrentPage('plans')}
+              onSuccess={() => {
+                sessionStorage.removeItem('selectedPlan');
+                setCurrentPage('home');
+              }}
+              setCurrentPage={setCurrentPage}
+            />
+          );
+        }
         case 'admin-login': return <AdminLogin onLogin={(role, email) => {
           setUserRole(role);
           setUserEmail(email);
           setIsAdminLoggedIn(true);
+          // Save to localStorage immediately
+          localStorage.setItem('userRole', role);
+          localStorage.setItem('userEmail', email);
+          localStorage.setItem('isAdminLoggedIn', 'true');
           setCurrentPage('dashboard');
+          localStorage.setItem('currentPage', 'dashboard');
         }} logActivity={logActivity} />;
         default: return <PublicHome setCurrentPage={setCurrentPage} />;
       }
@@ -305,7 +353,7 @@ const App: React.FC = () => {
           />
         );
         case 'members': return <MemberManager members={members} setMembers={setMembers} role={userRole} logActivity={logActivity} />;
-        case 'payments': return <PaymentProcessor payments={payments} setPayments={setPayments} members={members} role={userRole} logActivity={logActivity} />;
+        case 'payments': return <PaymentProcessor payments={payments} setPayments={setPayments} members={members} setMembers={setMembers} role={userRole} logActivity={logActivity} />;
         case 'subscriptions': return <SubscriptionTracker members={members} setMembers={setMembers} role={userRole} logActivity={logActivity} />;
         case 'communications': return <CommunicationCenter members={members} />;
         case 'activity-logs': return <ActivityLogs logs={activityLogs} />;
@@ -316,6 +364,12 @@ const App: React.FC = () => {
           gallery={gallery} 
           setGallery={setGallery} 
           role={userRole} 
+        />;
+        case 'settings': return <PrivilegeManager 
+          staff={staff} 
+          setStaff={setStaff} 
+          role={userRole}
+          logActivity={logActivity}
         />;
         default: return <AdminDashboard members={members} payments={payments} role={userRole} staff={staff} attendanceRecords={attendanceRecords} activityLogs={activityLogs} />;
       }
@@ -328,6 +382,11 @@ const App: React.FC = () => {
     setUserEmail('');
     setIsAdminLoggedIn(false);
     setCurrentPage('home');
+    // Clear authentication data from localStorage
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('isAdminLoggedIn');
+    localStorage.setItem('currentPage', 'home');
   };
 
   // Show loading state while initializing
@@ -353,6 +412,8 @@ const App: React.FC = () => {
           setCurrentPage={setCurrentPage} 
           currentPage={currentPage} 
           role={userRole}
+          staff={staff}
+          userEmail={userEmail}
           onLogout={handleLogout}
           isOnShift={isOnShift}
           onShiftSignIn={handleShiftSignIn}

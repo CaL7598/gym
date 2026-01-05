@@ -27,9 +27,25 @@ const Contact: React.FC = () => {
               <div className="w-12 h-12 bg-rose-600 text-white rounded-xl flex items-center justify-center shrink-0">
                 <Phone size={24} />
               </div>
-              <div>
-                <h4 className="font-bold text-slate-900 text-lg mb-1">Phone Number</h4>
-                <p className="text-slate-500 text-sm">+233 24 412 3456 / +233 55 987 6543</p>
+              <div className="flex-1">
+                <h4 className="font-bold text-slate-900 text-lg mb-3">Contact Lines</h4>
+                <div className="space-y-2 text-slate-700">
+                  <p className="text-sm">
+                    <a href="tel:+233551336976" className="text-rose-600 hover:text-rose-700">0551336976</a>
+                  </p>
+                  <p className="text-sm">
+                    <a href="tel:+233246458898" className="text-rose-600 hover:text-rose-700">0246458898</a>
+                  </p>
+                  <p className="text-sm">
+                    <a href="tel:+233243505882" className="text-rose-600 hover:text-rose-700">0243505882</a>
+                  </p>
+                  <p className="text-sm">
+                    <a href="tel:+233556620810" className="text-rose-600 hover:text-rose-700">0556620810</a>
+                  </p>
+                  <p className="text-sm">
+                    <a href="tel:+16477451003" className="text-rose-600 hover:text-rose-700">+1 647 745 1003</a>
+                  </p>
+                </div>
               </div>
             </div>
 

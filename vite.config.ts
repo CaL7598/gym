@@ -8,6 +8,12 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          '/api': {
+            target: 'http://localhost:3001',
+            changeOrigin: true,
+          },
+        },
       },
       plugins: [react()],
       define: {
@@ -18,11 +24,8 @@ export default defineConfig(({ mode }) => {
         // Also expose to import.meta.env for Vite
         'import.meta.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'import.meta.env.VITE_EMAILJS_SERVICE_ID': JSON.stringify(env.VITE_EMAILJS_SERVICE_ID),
-        'import.meta.env.VITE_EMAILJS_TEMPLATE_ID': JSON.stringify(env.VITE_EMAILJS_TEMPLATE_ID),
-        'import.meta.env.VITE_EMAILJS_WELCOME_TEMPLATE_ID': JSON.stringify(env.VITE_EMAILJS_WELCOME_TEMPLATE_ID),
-        'import.meta.env.VITE_EMAILJS_PAYMENT_TEMPLATE_ID': JSON.stringify(env.VITE_EMAILJS_PAYMENT_TEMPLATE_ID),
-        'import.meta.env.VITE_EMAILJS_PUBLIC_KEY': JSON.stringify(env.VITE_EMAILJS_PUBLIC_KEY),
+        'import.meta.env.VITE_RESEND_API_KEY': JSON.stringify(env.VITE_RESEND_API_KEY),
+        'import.meta.env.VITE_RESEND_FROM_EMAIL': JSON.stringify(env.VITE_RESEND_FROM_EMAIL),
       },
       resolve: {
         alias: {

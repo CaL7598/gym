@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS staff (
 -- Payments table
 CREATE TABLE IF NOT EXISTS payments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+  member_id UUID REFERENCES members(id) ON DELETE CASCADE, -- Can be NULL for pending member registrations
   member_name TEXT NOT NULL,
   amount DECIMAL(10, 2) NOT NULL,
   date DATE NOT NULL,
@@ -79,6 +79,14 @@ CREATE TABLE IF NOT EXISTS payments (
   transaction_id TEXT,
   momo_phone TEXT,
   network TEXT,
+  -- Fields for pending member registrations (from checkout)
+  is_pending_member BOOLEAN DEFAULT FALSE,
+  member_email TEXT,
+  member_phone TEXT,
+  member_address TEXT,
+  member_plan TEXT CHECK (member_plan IN ('Basic', 'Premium', 'VIP')),
+  member_start_date DATE,
+  member_expiry_date DATE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

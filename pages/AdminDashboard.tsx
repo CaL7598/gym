@@ -1,13 +1,12 @@
 
 import React, { useMemo, useState } from 'react';
-import { Member, PaymentRecord, UserRole, StaffMember, AttendanceRecord, ActivityLog } from '../types';
+import { Member, PaymentRecord, UserRole, StaffMember, AttendanceRecord, ActivityLog, PaymentStatus } from '../types';
 import { 
   Users, 
   CreditCard, 
   AlertCircle, 
   TrendingUp, 
   CheckCircle2,
-  Brain,
   Activity,
   MapPin,
   Clock,
@@ -15,7 +14,9 @@ import {
   Calendar,
   Search,
   DollarSign,
-  Filter
+  Filter,
+  Bell,
+  UserPlus
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -28,7 +29,6 @@ import {
   LineChart,
   Line
 } from 'recharts';
-import { generateSummary } from '../geminiService';
 
 interface DashboardProps {
   members: Member[];
@@ -159,17 +159,97 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
     };
   }, [payments, revenuePeriod, customDateRange, showCustomRange]);
 
-  const handleAiInsights = async () => {
-    setIsGenerating(true);
-    try {
-      const summary = await generateSummary(stats);
-      setAiSummary(summary);
-    } catch (error) {
-      console.error('Error generating AI insights:', error);
-      setAiSummary('Failed to generate insights. Please check your Gemini API key configuration.');
-    } finally {
-      setIsGenerating(false);
+  // Algorithm-based analytics summary generator
+  const generateAnalyticsSummary = (stats: typeof stats, revenueData: typeof revenueData) => {
+    const insights: string[] = [];
+    
+    // Member Status Analysis
+    const activePercentage = stats.total > 0 ? (stats.active / stats.total * 100).toFixed(1) : '0';
+    const expiringPercentage = stats.total > 0 ? (stats.expiring / stats.total * 100).toFixed(1) : '0';
+    const expiredPercentage = stats.total > 0 ? (stats.expired / stats.total * 100).toFixed(1) : '0';
+    
+    insights.push(`📊 MEMBER STATUS OVERVIEW`);
+    insights.push(`Active Members: ${stats.active} (${activePercentage}%)`);
+    insights.push(`Expiring Soon: ${stats.expiring} (${expiringPercentage}%)`);
+    insights.push(`Expired: ${stats.expired} (${expiredPercentage}%)`);
+    insights.push(``);
+    
+    // Member Health Assessment
+    if (parseFloat(activePercentage) >= 70) {
+      insights.push(`✅ EXCELLENT: High member retention rate indicates strong business health.`);
+    } else if (parseFloat(activePercentage) >= 50) {
+      insights.push(`⚠️ MODERATE: Member retention could be improved. Consider engagement campaigns.`);
+    } else {
+      insights.push(`🔴 ATTENTION NEEDED: Low active member rate. Review retention strategies.`);
     }
+    insights.push(``);
+    
+    // Expiring Members Alert
+    if (stats.expiring > 0) {
+      insights.push(`⚠️ ACTION REQUIRED: ${stats.expiring} member(s) expiring soon.`);
+      insights.push(`Recommendation: Send renewal reminders and offer incentives.`);
+      insights.push(``);
+    }
+    
+    // Revenue Analysis
+    insights.push(`💰 REVENUE ANALYSIS`);
+    insights.push(`Total Revenue (All Time): ₵${stats.revenue.toLocaleString()}`);
+    insights.push(`Period Revenue (${revenueData.periodLabel}): ₵${revenueData.totalRevenue.toLocaleString()}`);
+    
+    if (revenueData.transactionCount > 0) {
+      const avgTransaction = revenueData.totalRevenue / revenueData.transactionCount;
+      insights.push(`Average Transaction: ₵${avgTransaction.toFixed(0)}`);
+      insights.push(`Total Transactions: ${revenueData.transactionCount}`);
+    }
+    insights.push(``);
+    
+    // Payment Method Breakdown
+    if (revenueData.totalRevenue > 0) {
+      const cashPercentage = (revenueData.cashRevenue / revenueData.totalRevenue * 100).toFixed(1);
+      const momoPercentage = (revenueData.momoRevenue / revenueData.totalRevenue * 100).toFixed(1);
+      insights.push(`💳 PAYMENT METHOD BREAKDOWN`);
+      insights.push(`Cash: ₵${revenueData.cashRevenue.toLocaleString()} (${cashPercentage}%)`);
+      insights.push(`Mobile Money: ₵${revenueData.momoRevenue.toLocaleString()} (${momoPercentage}%)`);
+      insights.push(``);
+    }
+    
+    // Business Health Recommendations
+    insights.push(`🎯 RECOMMENDATIONS`);
+    
+    if (stats.expiring >= 5) {
+      insights.push(`1. Focus on member retention - ${stats.expiring} members expiring soon`);
+    }
+    
+    if (stats.expired > stats.active * 0.3) {
+      insights.push(`2. High expired member count - Consider re-engagement campaigns`);
+    }
+    
+    if (revenueData.totalRevenue > 0 && stats.active > 0) {
+      const revenuePerActiveMember = revenueData.totalRevenue / stats.active;
+      if (revenuePerActiveMember < 150) {
+        insights.push(`3. Low revenue per active member (₵${revenuePerActiveMember.toFixed(0)}) - Consider upselling premium plans`);
+      }
+    }
+    
+    if (stats.active < 10) {
+      insights.push(`4. Low active member count - Focus on new member acquisition`);
+    }
+    
+    if (stats.expiring === 0 && stats.active > 0) {
+      insights.push(`5. Great job! No expiring members - Continue maintaining member satisfaction`);
+    }
+    
+    return insights.join('\n');
+  };
+
+  const handleAiInsights = () => {
+    setIsGenerating(true);
+    // Simulate brief processing time for better UX
+    setTimeout(() => {
+      const summary = generateAnalyticsSummary(stats, revenueData);
+      setAiSummary(summary);
+      setIsGenerating(false);
+    }, 500);
   };
 
   // Helper to determine staff status
@@ -187,8 +267,60 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
     };
   };
 
+  // Get pending payments (including pending member registrations)
+  const pendingPayments = useMemo(() => {
+    return payments.filter(p => p.status === PaymentStatus.PENDING);
+  }, [payments]);
+
+  const pendingMemberPayments = useMemo(() => {
+    return pendingPayments.filter(p => p.isPendingMember);
+  }, [pendingPayments]);
+
   return (
     <div className="space-y-6">
+      {/* Pending Payment Notifications */}
+      {pendingPayments.length > 0 && (
+        <div className={`rounded-xl border-2 p-4 ${
+          pendingMemberPayments.length > 0
+            ? 'bg-amber-50 border-amber-300'
+            : 'bg-blue-50 border-blue-300'
+        }`}>
+          <div className="flex items-start gap-4">
+            <div className={`p-2 rounded-lg ${
+              pendingMemberPayments.length > 0
+                ? 'bg-amber-100 text-amber-600'
+                : 'bg-blue-100 text-blue-600'
+            }`}>
+              <Bell size={24} />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-slate-900 mb-1 flex items-center gap-2">
+                {pendingMemberPayments.length > 0 ? (
+                  <>
+                    <UserPlus size={18} />
+                    {pendingMemberPayments.length} New Member Registration{pendingMemberPayments.length > 1 ? 's' : ''} Awaiting Payment Confirmation
+                  </>
+                ) : (
+                  <>
+                    <CreditCard size={18} />
+                    {pendingPayments.length} Payment{pendingPayments.length > 1 ? 's' : ''} Pending Verification
+                  </>
+                )}
+              </h3>
+              <p className="text-sm text-slate-600 mb-3">
+                {pendingMemberPayments.length > 0
+                  ? `New members have submitted payments and are waiting for confirmation. Once confirmed, they will be added to the members list and receive welcome emails.`
+                  : `Mobile Money payments are waiting for verification. Please review and confirm them in the Payments section.`
+                }
+              </p>
+              <div className="text-xs text-slate-500 mt-2">
+                Go to <strong>Payments</strong> section to review and confirm these payments.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">System Overview</h2>
@@ -199,14 +331,13 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
           disabled={isGenerating}
           className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 text-sm font-medium shadow-sm"
         >
-          <Brain size={18} />
-          {isGenerating ? 'Analyzing...' : 'AI Insights'}
+          <TrendingUp size={18} />
+          {isGenerating ? 'Analyzing...' : 'Analytics Insights'}
         </button>
       </div>
 
-      {/* Revenue Analytics Section - Super Admin Only */}
-      {role === UserRole.SUPER_ADMIN && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      {/* Revenue Analytics Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -322,8 +453,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
           {revenueData.chartData.length > 0 ? (
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
               <h4 className="text-sm font-bold text-slate-700 mb-4">Daily Revenue Breakdown</h4>
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[200px] w-full" style={{ minWidth: 0, minHeight: 200, width: '100%' }}>
+                <ResponsiveContainer width="100%" height={200} minWidth={0}>
                   <LineChart data={revenueData.chartData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis 
@@ -366,7 +497,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
             </div>
           )}
         </div>
-      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -408,8 +538,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
               <TrendingUp size={18} className="text-slate-400" />
               Member Distribution
             </h3>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[250px] w-full" style={{ minWidth: 0, minHeight: 250, width: '100%' }}>
+              <ResponsiveContainer width="100%" height={250} minWidth={0}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} />
@@ -476,8 +606,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
         <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg relative overflow-hidden h-fit">
           <div className="relative z-10 h-full flex flex-col">
             <div className="flex items-center gap-2 mb-4 text-rose-400">
-              <Brain size={24} />
-              <h3 className="font-bold uppercase tracking-wider text-xs">Management Assistant</h3>
+              <TrendingUp size={24} />
+              <h3 className="font-bold uppercase tracking-wider text-xs">Business Analytics</h3>
             </div>
             <div className="flex-1">
               {aiSummary ? (
@@ -486,8 +616,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-12">
-                  <div className="w-12 h-12 rounded-full border-2 border-slate-700 border-t-rose-500 animate-spin" />
-                  <p className="text-slate-500 text-sm">Click 'AI Insights' to generate a health report.</p>
+                  <TrendingUp size={48} className="text-slate-700 mb-4" />
+                  <p className="text-slate-500 text-sm">Click 'Analytics Insights' to generate a business health report.</p>
                 </div>
               )}
             </div>

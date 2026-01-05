@@ -1,8 +1,19 @@
 
 import React from 'react';
 import { Check, ArrowRight } from 'lucide-react';
+import { SubscriptionPlan } from '../types';
 
-const MembershipPlans: React.FC = () => {
+interface MembershipPlansProps {
+  setCurrentPage: (page: string) => void;
+  selectedPlan?: {
+    name: SubscriptionPlan;
+    price: string;
+    period: string;
+  } | null;
+  onPlanSelect?: (plan: { name: SubscriptionPlan; price: string; period: string }) => void;
+}
+
+const MembershipPlans: React.FC<MembershipPlansProps> = ({ setCurrentPage, selectedPlan, onPlanSelect }) => {
   const plans = [
     {
       name: 'Basic',
@@ -67,11 +78,27 @@ const MembershipPlans: React.FC = () => {
                 </ul>
               </div>
               <div className="p-8 mt-auto border-t border-slate-100 bg-slate-50">
-                <button className={`w-full py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 ${
-                  plan.recommended 
-                    ? 'bg-rose-600 text-white hover:bg-rose-700' 
-                    : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                }`}>
+                <button 
+                  onClick={() => {
+                    const planData = {
+                      name: plan.name as SubscriptionPlan,
+                      price: plan.price,
+                      period: plan.period
+                    };
+                    if (onPlanSelect) {
+                      onPlanSelect(planData);
+                    } else if (setCurrentPage) {
+                      // Store selected plan in sessionStorage and navigate to checkout
+                      sessionStorage.setItem('selectedPlan', JSON.stringify(planData));
+                      setCurrentPage('checkout');
+                    }
+                  }}
+                  className={`w-full py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 ${
+                    plan.recommended 
+                      ? 'bg-rose-600 text-white hover:bg-rose-700' 
+                      : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                  }`}
+                >
                   Select {plan.name}
                   <ArrowRight size={18} />
                 </button>

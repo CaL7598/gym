@@ -5,6 +5,31 @@ export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN'
 }
 
+export enum Privilege {
+  // Member Management
+  MANAGE_MEMBERS = 'MANAGE_MEMBERS',
+  DELETE_MEMBERS = 'DELETE_MEMBERS',
+  
+  // Payment Management
+  MANAGE_PAYMENTS = 'MANAGE_PAYMENTS',
+  CONFIRM_PAYMENTS = 'CONFIRM_PAYMENTS',
+  
+  // Content Management
+  MANAGE_CONTENT = 'MANAGE_CONTENT',
+  MANAGE_ANNOUNCEMENTS = 'MANAGE_ANNOUNCEMENTS',
+  MANAGE_GALLERY = 'MANAGE_GALLERY',
+  
+  // System Access
+  VIEW_ACTIVITY_LOGS = 'VIEW_ACTIVITY_LOGS',
+  VIEW_ALL_ATTENDANCE = 'VIEW_ALL_ATTENDANCE',
+  MANAGE_STAFF = 'MANAGE_STAFF',
+  MANAGE_PRIVILEGES = 'MANAGE_PRIVILEGES',
+  
+  // Analytics
+  VIEW_REVENUE_ANALYTICS = 'VIEW_REVENUE_ANALYTICS',
+  VIEW_TEAM_MONITORING = 'VIEW_TEAM_MONITORING'
+}
+
 export enum SubscriptionPlan {
   BASIC = 'Basic',
   PREMIUM = 'Premium',
@@ -43,6 +68,7 @@ export interface StaffMember {
   position: string;
   phone: string;
   avatar?: string;
+  privileges?: Privilege[]; // Privileges assigned by Super Admin
 }
 
 export interface PaymentRecord {
@@ -57,6 +83,14 @@ export interface PaymentRecord {
   transactionId?: string;
   momoPhone?: string;
   network?: string;
+  // Fields for pending member registrations (from checkout)
+  isPendingMember?: boolean;
+  memberEmail?: string;
+  memberPhone?: string;
+  memberAddress?: string;
+  memberPlan?: SubscriptionPlan;
+  memberStartDate?: string;
+  memberExpiryDate?: string;
 }
 
 export interface Announcement {

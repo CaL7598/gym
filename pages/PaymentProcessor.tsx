@@ -1,18 +1,20 @@
 
 import React, { useState } from 'react';
-import { PaymentRecord, UserRole, Member, PaymentMethod, PaymentStatus } from '../types';
-import { CreditCard, Smartphone, CheckCircle, Search, Filter, History, X } from 'lucide-react';
-import { sendPaymentEmail } from '../lib/emailService';
+import { PaymentRecord, UserRole, Member, PaymentMethod, PaymentStatus, SubscriptionPlan } from '../types';
+import { CreditCard, Smartphone, CheckCircle, Search, Filter, History, X, UserPlus, AlertCircle } from 'lucide-react';
+import { sendPaymentEmail, sendWelcomeEmail } from '../lib/emailService';
+import { membersService, paymentsService } from '../lib/database';
 
 interface PaymentProcessorProps {
   payments: PaymentRecord[];
   setPayments: React.Dispatch<React.SetStateAction<PaymentRecord[]>>;
   members: Member[];
+  setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
   role: UserRole;
   logActivity: (action: string, details: string, category: 'access' | 'admin' | 'financial') => void;
 }
 
-const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPayments, members, role, logActivity }) => {
+const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPayments, members, setMembers, role, logActivity }) => {
   const [activeTab, setActiveTab] = useState<'history' | 'momo'>('history');
   const [showPayModal, setShowPayModal] = useState(false);
   const [newPay, setNewPay] = useState<Partial<PaymentRecord>>({
@@ -31,26 +33,131 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
     const pay = payments.find(p => p.id === id);
     if (!pay) return;
     
-    setPayments(prev => prev.map(p => p.id === id ? { ...p, status: PaymentStatus.CONFIRMED, confirmedBy: 'Staff' } : p));
-    logActivity('Confirm Payment', `Verified ${pay.method} payment of ₵${pay.amount} for ${pay.memberName}`, 'financial');
-    
-    // Send payment confirmation email
-    const member = members.find(m => m.id === pay.memberId);
-    if (member && member.email) {
-      const emailSent = await sendPaymentEmail({
-        memberName: pay.memberName,
-        memberEmail: member.email,
-        amount: pay.amount,
-        paymentMethod: pay.method,
-        paymentDate: pay.date,
-        transactionId: pay.transactionId
-      });
-      
-      if (emailSent) {
-        console.log(`Payment confirmation email sent to ${member.email}`);
+    try {
+      // If this is a pending member registration, create the member first
+      if (pay.isPendingMember && pay.memberEmail) {
+        const memberToCreate = {
+          fullName: pay.memberName,
+          email: pay.memberEmail,
+          phone: pay.memberPhone || '',
+          address: pay.memberAddress,
+          plan: (pay.memberPlan || SubscriptionPlan.BASIC) as SubscriptionPlan,
+          startDate: pay.memberStartDate || new Date().toISOString().split('T')[0],
+          expiryDate: pay.memberExpiryDate || new Date().toISOString().split('T')[0],
+          status: 'active' as const
+        };
+
+        // Create member in database
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        if (supabaseUrl && supabaseKey) {
+          try {
+            const createdMember = await membersService.create(memberToCreate);
+            console.log('✅ Member created:', createdMember.id);
+            
+            // Update local state
+            setMembers(prev => [...prev, createdMember]);
+            
+            // Update payment with memberId
+            const updatedPayment = {
+              ...pay,
+              memberId: createdMember.id,
+              status: PaymentStatus.CONFIRMED,
+              confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+            };
+            
+            // Update payment in database
+            await paymentsService.update(id, {
+              memberId: createdMember.id,
+              status: PaymentStatus.CONFIRMED,
+              confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+            });
+            
+            // Update local state
+            setPayments(prev => prev.map(p => p.id === id ? updatedPayment : p));
+            
+            logActivity('Confirm Payment & Create Member', `Verified ${pay.method} payment of ₵${pay.amount} and created member ${pay.memberName}`, 'financial');
+            
+            // Send welcome email
+            if (createdMember.email) {
+              const emailSent = await sendWelcomeEmail({
+                memberName: createdMember.fullName,
+                memberEmail: createdMember.email,
+                plan: createdMember.plan,
+                startDate: createdMember.startDate,
+                expiryDate: createdMember.expiryDate
+              });
+              
+              if (emailSent) {
+                console.log(`Welcome email sent to ${createdMember.email}`);
+              }
+            }
+            
+            // Send payment confirmation email
+            if (createdMember.email) {
+              await sendPaymentEmail({
+                memberName: pay.memberName,
+                memberEmail: createdMember.email,
+                amount: pay.amount,
+                paymentMethod: pay.method,
+                paymentDate: pay.date,
+                transactionId: pay.transactionId,
+                expiryDate: createdMember.expiryDate
+              });
+            }
+            
+            alert(`Payment confirmed and member ${pay.memberName} has been added!`);
+            return;
+          } catch (error: any) {
+            console.error('Error creating member:', error);
+            alert(`Failed to create member: ${error.message || 'Please try again'}`);
+            return;
+          }
+        } else {
+          alert('Database not configured. Cannot create member.');
+          return;
+        }
       } else {
-        console.warn(`Failed to send payment email to ${member.email}`);
+        // Regular payment confirmation (member already exists)
+        const updatedPayment = {
+          ...pay,
+          status: PaymentStatus.CONFIRMED,
+          confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+        };
+        
+        // Update payment in database
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        if (supabaseUrl && supabaseKey) {
+          await paymentsService.update(id, {
+            status: PaymentStatus.CONFIRMED,
+            confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+          });
+        }
+        
+        // Update local state
+        setPayments(prev => prev.map(p => p.id === id ? updatedPayment : p));
+        logActivity('Confirm Payment', `Verified ${pay.method} payment of ₵${pay.amount} for ${pay.memberName}`, 'financial');
+        
+        // Send payment confirmation email
+        const member = members.find(m => m.id === pay.memberId);
+        if (member && member.email) {
+          await sendPaymentEmail({
+            memberName: pay.memberName,
+            memberEmail: member.email,
+            amount: pay.amount,
+            paymentMethod: pay.method,
+            paymentDate: pay.date,
+            transactionId: pay.transactionId,
+            expiryDate: member.expiryDate
+          });
+        }
       }
+    } catch (error: any) {
+      console.error('Error confirming payment:', error);
+      alert(`Failed to confirm payment: ${error.message || 'Please try again'}`);
     }
   };
 
@@ -87,7 +194,8 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
         amount: payment.amount,
         paymentMethod: payment.method,
         paymentDate: payment.date,
-        transactionId: payment.transactionId
+        transactionId: payment.transactionId,
+        expiryDate: member.expiryDate
       });
       
       if (emailSent) {
@@ -193,9 +301,20 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
                         {payment.status === PaymentStatus.PENDING ? (
                           <button 
                             onClick={() => handleConfirmPayment(payment.id)}
-                            className="text-xs font-bold text-rose-600 hover:text-rose-700 underline"
+                            className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
+                              payment.isPendingMember
+                                ? 'bg-rose-600 text-white hover:bg-rose-700'
+                                : 'text-rose-600 hover:text-rose-700 underline'
+                            }`}
                           >
-                            Verify & Confirm
+                            {payment.isPendingMember ? (
+                              <span className="flex items-center gap-1">
+                                <UserPlus size={14} />
+                                Confirm & Add Member
+                              </span>
+                            ) : (
+                              'Verify & Confirm'
+                            )}
                           </button>
                         ) : (
                           <div className="text-[10px] text-slate-400">By {payment.confirmedBy}</div>

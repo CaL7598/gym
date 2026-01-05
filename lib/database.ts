@@ -120,6 +120,25 @@ export const staffService = {
     }
     
     return data ? mapStaffFromDB(data) : null;
+  },
+
+  async update(id: string, updates: Partial<StaffMember>): Promise<StaffMember> {
+    const { data, error } = await supabase
+      .from('staff')
+      .update({
+        ...mapStaffToDB(updates),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating staff:', error);
+      throw error;
+    }
+    
+    return mapStaffFromDB(data);
   }
 };
 
@@ -148,6 +167,14 @@ export const paymentsService = {
     
     if (error) {
       console.error('Error creating payment:', error);
+      // Check if error is about missing columns
+      if (error.message && error.message.includes('is_pending_member')) {
+        const helpfulError = new Error(
+          'Database schema is missing required columns. Please run the migration: MIGRATION_ADD_PENDING_MEMBER_FIELDS.sql in your Supabase SQL Editor.'
+        );
+        helpfulError.name = 'SCHEMA_MIGRATION_REQUIRED';
+        throw helpfulError;
+      }
       throw error;
     }
     
@@ -399,14 +426,27 @@ function mapStaffFromDB(db: any): StaffMember {
     role: db.role as UserRole,
     position: db.position,
     phone: db.phone,
-    avatar: db.avatar
+    avatar: db.avatar,
+    privileges: db.privileges ? JSON.parse(db.privileges) : undefined
   };
+}
+
+function mapStaffToDB(staff: Partial<StaffMember>): any {
+  const db: any = {};
+  if (staff.fullName !== undefined) db.full_name = staff.fullName;
+  if (staff.email !== undefined) db.email = staff.email;
+  if (staff.role !== undefined) db.role = staff.role;
+  if (staff.position !== undefined) db.position = staff.position;
+  if (staff.phone !== undefined) db.phone = staff.phone;
+  if (staff.avatar !== undefined) db.avatar = staff.avatar;
+  if (staff.privileges !== undefined) db.privileges = JSON.stringify(staff.privileges);
+  return db;
 }
 
 function mapPaymentFromDB(db: any): PaymentRecord {
   return {
     id: db.id,
-    memberId: db.member_id,
+    memberId: db.member_id || '',
     memberName: db.member_name,
     amount: db.amount,
     date: db.date,
@@ -415,13 +455,21 @@ function mapPaymentFromDB(db: any): PaymentRecord {
     confirmedBy: db.confirmed_by,
     transactionId: db.transaction_id,
     momoPhone: db.momo_phone,
-    network: db.network
+    network: db.network,
+    // Pending member fields
+    isPendingMember: db.is_pending_member || false,
+    memberEmail: db.member_email,
+    memberPhone: db.member_phone,
+    memberAddress: db.member_address,
+    memberPlan: db.member_plan,
+    memberStartDate: db.member_start_date,
+    memberExpiryDate: db.member_expiry_date
   };
 }
 
 function mapPaymentToDB(payment: Partial<PaymentRecord>): any {
   const db: any = {};
-  if (payment.memberId !== undefined) db.member_id = payment.memberId;
+  if (payment.memberId !== undefined) db.member_id = payment.memberId || null;
   if (payment.memberName !== undefined) db.member_name = payment.memberName;
   if (payment.amount !== undefined) db.amount = payment.amount;
   if (payment.date !== undefined) db.date = payment.date;
@@ -431,6 +479,28 @@ function mapPaymentToDB(payment: Partial<PaymentRecord>): any {
   if (payment.transactionId !== undefined) db.transaction_id = payment.transactionId;
   if (payment.momoPhone !== undefined) db.momo_phone = payment.momoPhone;
   if (payment.network !== undefined) db.network = payment.network;
+  // Pending member fields - only include if they have actual values (not undefined)
+  if (payment.isPendingMember !== undefined && payment.isPendingMember !== null) {
+    db.is_pending_member = payment.isPendingMember;
+  }
+  if (payment.memberEmail !== undefined && payment.memberEmail !== null && payment.memberEmail !== '') {
+    db.member_email = payment.memberEmail;
+  }
+  if (payment.memberPhone !== undefined && payment.memberPhone !== null && payment.memberPhone !== '') {
+    db.member_phone = payment.memberPhone;
+  }
+  if (payment.memberAddress !== undefined && payment.memberAddress !== null && payment.memberAddress !== '') {
+    db.member_address = payment.memberAddress;
+  }
+  if (payment.memberPlan !== undefined && payment.memberPlan !== null && payment.memberPlan !== '') {
+    db.member_plan = payment.memberPlan;
+  }
+  if (payment.memberStartDate !== undefined && payment.memberStartDate !== null && payment.memberStartDate !== '') {
+    db.member_start_date = payment.memberStartDate;
+  }
+  if (payment.memberExpiryDate !== undefined && payment.memberExpiryDate !== null && payment.memberExpiryDate !== '') {
+    db.member_expiry_date = payment.memberExpiryDate;
+  }
   return db;
 }
 

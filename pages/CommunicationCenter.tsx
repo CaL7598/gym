@@ -1,8 +1,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { Member } from '../types';
-import { Send, Sparkles, MessageSquare, Mail, History, Users, CheckSquare, Square } from 'lucide-react';
-import { generateCommunication } from '../geminiService';
+import { Send, MessageSquare, Mail, History, Users, CheckSquare, Square } from 'lucide-react';
+// AI Auto-Draft feature disabled
+// import { generateCommunication } from '../geminiService';
+import { sendMessageEmail, sendBulkMessageEmails } from '../lib/emailService';
 
 const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
   const [sendMode, setSendMode] = useState<'single' | 'broadcast'>('single');
@@ -11,7 +13,8 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
   const [selectAll, setSelectAll] = useState(false);
   const [msgType, setMsgType] = useState<'welcome' | 'reminder' | 'expiry' | 'general'>('reminder');
   const [message, setMessage] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  // AI Auto-Draft feature disabled
+  // const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
 
   const selectedMember = members.find(m => m.id === selectedMemberId);
@@ -42,40 +45,70 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
     setSelectedMemberIds(newSelection);
   };
 
-  const handleAiDraft = async () => {
-    if (sendMode === 'single' && !selectedMember) {
-      alert("Please select a member first.");
-      return;
-    }
-    setIsGenerating(true);
-    
-    if (sendMode === 'single' && selectedMember) {
-      const draft = await generateCommunication(msgType, selectedMember.fullName, selectedMember.plan, selectedMember.expiryDate);
-      setMessage(draft);
-    } else {
-      // For broadcast, generate a general message
-      const draft = await generateCommunication('general', 'All Members', 'All Plans', '');
-      setMessage(draft);
-    }
-    setIsGenerating(false);
-  };
+  // AI Auto-Draft feature disabled
+  // const handleAiDraft = async () => {
+  //   if (sendMode === 'single' && !selectedMember) {
+  //     alert("Please select a member first.");
+  //     return;
+  //   }
+  //   setIsGenerating(true);
+  //   
+  //   if (sendMode === 'single' && selectedMember) {
+  //     const draft = await generateCommunication(msgType, selectedMember.fullName, selectedMember.plan, selectedMember.expiryDate);
+  //     setMessage(draft);
+  //   } else {
+  //     // For broadcast, generate a general message
+  //     const draft = await generateCommunication('general', 'All Members', 'All Plans', '');
+  //     setMessage(draft);
+  //   }
+  //   setIsGenerating(false);
+  // };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!message) return;
 
     if (sendMode === 'single') {
       if (!selectedMember) return;
-      const newEntry = {
-        id: Date.now(),
-        to: selectedMember.fullName,
-        type: msgType,
-        date: new Date().toLocaleString(),
-        preview: message.substring(0, 60) + '...',
-        mode: 'single'
-      };
-      setHistory([newEntry, ...history]);
-      setMessage('');
-      alert(`Message sent to ${selectedMember.fullName}`);
+      
+      // Get subject based on message type
+      const subject = getSubjectForType(msgType, selectedMember.fullName);
+      
+      // Send email via Resend
+      try {
+        const result = await sendMessageEmail({
+          memberName: selectedMember.fullName,
+          memberEmail: selectedMember.email,
+          subject: subject,
+          message: message,
+          messageType: msgType
+        });
+
+        const newEntry = {
+          id: Date.now(),
+          to: selectedMember.fullName,
+          type: msgType,
+          date: new Date().toLocaleString(),
+          preview: message.substring(0, 60) + '...',
+          mode: 'single',
+          emailSent: result.success
+        };
+        setHistory([newEntry, ...history]);
+        setMessage('');
+        
+        if (result.success) {
+          alert(`Email sent successfully to ${selectedMember.fullName}`);
+        } else {
+          const error = result.error;
+          const errorMsg = error?.error || error?.message || 'Unknown error';
+          const suggestion = error?.suggestion || '';
+          const help = error?.help || '';
+          alert(`Failed to send email to ${selectedMember.fullName}.\n\nError: ${errorMsg}${suggestion ? `\n\n${suggestion}` : ''}${help ? `\n\n${help}` : ''}\n\nCheck the browser console and server terminal for more details.`);
+        }
+      } catch (error: any) {
+        console.error('Email sending error:', error);
+        const errorMsg = error?.message || 'Failed to send email';
+        alert(`Failed to send email to ${selectedMember.fullName}.\n\nError: ${errorMsg}\n\nCheck the browser console and server terminal for more details.`);
+      }
     } else {
       // Broadcast mode
       if (selectedMemberIds.size === 0 && !selectAll) {
@@ -84,8 +117,21 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
       }
 
       const recipients = selectAll ? members : members.filter(m => selectedMemberIds.has(m.id));
-      const recipientNames = recipients.map(m => m.fullName).join(', ');
       
+      // Prepare email data for all recipients
+      const emailData = recipients
+        .filter(m => m.email) // Only include members with email addresses
+        .map(member => ({
+          memberName: member.fullName,
+          memberEmail: member.email,
+          subject: getSubjectForType(msgType, member.fullName),
+          message: message,
+          messageType: msgType as 'welcome' | 'reminder' | 'expiry' | 'general'
+        }));
+
+      // Send emails via Resend
+      const { success, failed } = await sendBulkMessageEmails(emailData);
+
       const newEntry = {
         id: Date.now(),
         to: selectAll ? `All Members (${members.length})` : `${recipients.length} Members`,
@@ -93,13 +139,35 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
         date: new Date().toLocaleString(),
         preview: message.substring(0, 60) + '...',
         mode: 'broadcast',
-        recipients: recipientNames
+        recipients: recipients.map(m => m.fullName).join(', '),
+        emailSent: success,
+        emailFailed: failed
       };
       setHistory([newEntry, ...history]);
       setMessage('');
       setSelectedMemberIds(new Set());
       setSelectAll(false);
-      alert(`Message sent to ${selectAll ? `all ${members.length} members` : `${recipients.length} selected members`}`);
+      
+      if (failed === 0) {
+        alert(`Emails sent successfully to ${success} member(s)`);
+      } else {
+        alert(`Emails sent to ${success} member(s), ${failed} failed. Please check the console for details.`);
+      }
+    }
+  };
+
+  const getSubjectForType = (type: string, memberName: string): string => {
+    switch (type) {
+      case 'welcome':
+        return `Welcome to Goodlife Fitness, ${memberName}!`;
+      case 'reminder':
+        return `Subscription Reminder - Goodlife Fitness`;
+      case 'expiry':
+        return `Important: Your Membership Expiry Notice`;
+      case 'general':
+        return `Message from Goodlife Fitness`;
+      default:
+        return `Message from Goodlife Fitness`;
     }
   };
 
@@ -243,18 +311,10 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
           <div className="relative">
             <textarea 
               className="w-full h-64 p-4 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-rose-500 outline-none resize-none"
-              placeholder="Start typing your message or use AI to draft one..."
+              placeholder="Start typing your message..."
               value={message}
               onChange={e => setMessage(e.target.value)}
             />
-            <button 
-              onClick={handleAiDraft}
-              disabled={isGenerating}
-              className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 disabled:opacity-50 transition-all"
-            >
-              <Sparkles size={14} className="text-rose-400" />
-              {isGenerating ? 'Drafting...' : 'AI Auto-Draft'}
-            </button>
           </div>
 
           <div className="flex gap-4">

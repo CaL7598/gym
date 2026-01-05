@@ -1,15 +1,15 @@
-import emailjs from '@emailjs/browser';
+/**
+ * Email Service using Resend API via Backend Proxy
+ * 
+ * This service calls our backend API server which handles Resend API calls
+ * to avoid CORS issues and keep the API key secure on the server-side.
+ * 
+ * In development, Vite proxy forwards /api/* requests to the backend server.
+ * In production, set VITE_API_URL to your deployed backend URL.
+ */
 
-// Initialize EmailJS (you'll need to set these in your .env file)
-const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
-const EMAILJS_WELCOME_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_WELCOME_TEMPLATE_ID || import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
-const EMAILJS_PAYMENT_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_PAYMENT_TEMPLATE_ID || import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
-
-// Initialize EmailJS
-if (EMAILJS_PUBLIC_KEY) {
-  emailjs.init(EMAILJS_PUBLIC_KEY);
-}
+// Use relative URL for Vite proxy in development, or absolute URL in production
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:3001');
 
 export interface WelcomeEmailParams {
   memberName: string;
@@ -26,36 +26,44 @@ export interface PaymentEmailParams {
   paymentMethod: string;
   paymentDate: string;
   transactionId?: string;
+  expiryDate?: string;
+}
+
+export interface MessageEmailParams {
+  memberName: string;
+  memberEmail: string;
+  subject: string;
+  message: string;
+  messageType?: 'welcome' | 'reminder' | 'expiry' | 'general';
 }
 
 /**
  * Send welcome email to new member
  */
 export const sendWelcomeEmail = async (params: WelcomeEmailParams): Promise<boolean> => {
-  if (!EMAILJS_SERVICE_ID || !EMAILJS_WELCOME_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
-    console.warn('EmailJS not configured. Email will not be sent.');
-    return false;
-  }
-
   try {
-    const templateParams = {
-      to_name: params.memberName,
-      to_email: params.memberEmail,
-      plan: params.plan,
-      start_date: params.startDate,
-      expiry_date: params.expiryDate,
-      gym_name: 'Goodlife Fitness',
-      gym_email: 'info@goodlife.com',
-      gym_phone: '+233 24 400 0111',
-    };
+    const response = await fetch(`${API_BASE_URL}/api/send-welcome-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        memberName: params.memberName,
+        memberEmail: params.memberEmail,
+        plan: params.plan,
+        startDate: params.startDate,
+        expiryDate: params.expiryDate,
+      }),
+    });
 
-    await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_WELCOME_TEMPLATE_ID,
-      templateParams
-    );
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Error sending welcome email:', error);
+      return false;
+    }
 
-    console.log('Welcome email sent successfully to', params.memberEmail);
+    const data = await response.json();
+    console.log('Welcome email sent successfully to', params.memberEmail, data);
     return true;
   } catch (error) {
     console.error('Error sending welcome email:', error);
@@ -67,34 +75,107 @@ export const sendWelcomeEmail = async (params: WelcomeEmailParams): Promise<bool
  * Send payment confirmation email
  */
 export const sendPaymentEmail = async (params: PaymentEmailParams): Promise<boolean> => {
-  if (!EMAILJS_SERVICE_ID || !EMAILJS_PAYMENT_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
-    console.warn('EmailJS not configured. Email will not be sent.');
-    return false;
-  }
-
   try {
-    const templateParams = {
-      to_name: params.memberName,
-      to_email: params.memberEmail,
-      amount: `₵${params.amount.toLocaleString()}`,
-      payment_method: params.paymentMethod,
-      payment_date: params.paymentDate,
-      transaction_id: params.transactionId || 'N/A',
-      gym_name: 'Goodlife Fitness',
-      gym_email: 'info@goodlife.com',
-    };
+    const response = await fetch(`${API_BASE_URL}/api/send-payment-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        memberName: params.memberName,
+        memberEmail: params.memberEmail,
+        amount: params.amount,
+        paymentMethod: params.paymentMethod,
+        paymentDate: params.paymentDate,
+        transactionId: params.transactionId,
+        expiryDate: params.expiryDate,
+      }),
+    });
 
-    await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_PAYMENT_TEMPLATE_ID,
-      templateParams
-    );
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Error sending payment email:', error);
+      return false;
+    }
 
-    console.log('Payment confirmation email sent successfully to', params.memberEmail);
+    const data = await response.json();
+    console.log('Payment confirmation email sent successfully to', params.memberEmail, data);
     return true;
   } catch (error) {
     console.error('Error sending payment email:', error);
     return false;
   }
+};
+
+/**
+ * Send general message email to member
+ */
+export const sendMessageEmail = async (params: MessageEmailParams): Promise<{ success: boolean; error?: any }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/send-message-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        memberName: params.memberName,
+        memberEmail: params.memberEmail,
+        subject: params.subject,
+        message: params.message,
+      }),
+    });
+
+    if (!response.ok) {
+      let error;
+      try {
+        const text = await response.text();
+        error = text ? JSON.parse(text) : { error: `HTTP ${response.status}: ${response.statusText}` };
+      } catch (parseError) {
+        error = { 
+          error: `HTTP ${response.status}: ${response.statusText}`,
+          message: 'Server returned an invalid response',
+          suggestion: 'Check the server console for detailed error information'
+        };
+      }
+      console.error('Error sending message email:', error);
+      return { success: false, error };
+    }
+
+    const data = await response.json();
+    console.log('Message email sent successfully to', params.memberEmail, data);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error sending message email:', error);
+    return { 
+      success: false, 
+      error: {
+        error: error.message || 'Network error or server unavailable',
+        message: 'Failed to communicate with the email server',
+        suggestion: 'Check if the server is running and accessible'
+      }
+    };
+  }
+};
+
+/**
+ * Send message email to multiple recipients (for broadcast)
+ */
+export const sendBulkMessageEmails = async (recipients: MessageEmailParams[]): Promise<{ success: number; failed: number }> => {
+  let success = 0;
+  let failed = 0;
+
+  // Send emails sequentially to avoid rate limiting issues
+  for (const recipient of recipients) {
+    const result = await sendMessageEmail(recipient);
+    if (result.success) {
+      success++;
+    } else {
+      failed++;
+    }
+    // Small delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  return { success, failed };
 };
 

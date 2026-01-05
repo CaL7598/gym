@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { UserRole } from '../types';
+import { UserRole, StaffMember, Privilege } from '../types';
 import { NAVIGATION_ITEMS } from '../constants';
+import { hasPrivilege } from '../lib/privileges';
 import { 
   LogOut, 
   Menu, 
@@ -18,6 +19,8 @@ interface AdminLayoutProps {
   setCurrentPage: (page: string) => void;
   currentPage: string;
   role: UserRole;
+  staff: StaffMember[];
+  userEmail: string;
   onLogout: () => void;
   isOnShift?: boolean;
   onShiftSignIn?: () => void;
@@ -28,7 +31,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   children, 
   setCurrentPage, 
   currentPage, 
-  role, 
+  role,
+  staff,
+  userEmail,
   onLogout,
   isOnShift,
   onShiftSignIn,
@@ -36,7 +41,24 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
 
-  const filteredNav = NAVIGATION_ITEMS.filter(item => item.roles.includes(role));
+  // Get current staff member for privilege checks
+  const currentStaff = staff.find(s => s.email === userEmail);
+
+  // Filter navigation based on role and privileges
+  const filteredNav = NAVIGATION_ITEMS.filter(item => {
+    // Basic role check
+    if (!item.roles.includes(role)) return false;
+    
+    // Super Admin has access to everything
+    if (role === UserRole.SUPER_ADMIN) return true;
+    
+    // Staff members need privilege checks for admin-only items
+    if (item.id === 'activity-logs' && !hasPrivilege(role, Privilege.VIEW_ACTIVITY_LOGS, currentStaff)) return false;
+    if (item.id === 'content' && !hasPrivilege(role, Privilege.MANAGE_CONTENT, currentStaff)) return false;
+    if (item.id === 'settings' && !hasPrivilege(role, Privilege.MANAGE_PRIVILEGES, currentStaff)) return false;
+    
+    return true;
+  });
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">

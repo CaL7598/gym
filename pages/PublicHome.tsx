@@ -4,24 +4,24 @@ import {
   ArrowRight, 
   CheckCircle, 
   Clock, 
-  MapPin, 
   Zap, 
   Users, 
   Dumbbell, 
   Heart, 
   Award,
-  Smartphone,
   Mail,
   Share2,
-  Play,
   TrendingUp,
   Target,
   Activity,
   Sparkles,
   Star,
-  Quote,
-  Calendar
+  Quote
 } from 'lucide-react';
+
+// Import videos from the video folder
+import video1 from '../video/13749263_3840_2160_24fps.mp4';
+import video2 from '../video/4746006-uhd_3840_2160_25fps.mp4';
 
 const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurrentPage }) => {
   return (
@@ -38,24 +38,13 @@ const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurr
             className="w-full h-full object-cover"
             poster="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1920&h=1080&fit=crop"
           >
-            {/* Primary video source - Man lifting weights in gym */}
+            {/* Local video sources from video folder */}
             <source 
-              src="https://assets.mixkit.co/videos/preview/mixkit-man-lifting-weights-in-a-gym-2344-large.mp4" 
+              src={video1} 
               type="video/mp4" 
             />
-            {/* Alternative gym video - Woman working out */}
             <source 
-              src="https://assets.mixkit.co/videos/preview/mixkit-woman-doing-push-ups-2343-large.mp4" 
-              type="video/mp4" 
-            />
-            {/* Gym equipment and training video */}
-            <source 
-              src="https://assets.mixkit.co/videos/preview/mixkit-close-up-of-a-man-lifting-weights-2345-large.mp4" 
-              type="video/mp4" 
-            />
-            {/* Additional gym workout video - Cardio training */}
-            <source 
-              src="https://assets.mixkit.co/videos/preview/mixkit-woman-running-on-treadmill-2342-large.mp4" 
+              src={video2} 
               type="video/mp4" 
             />
             {/* Fallback image if video doesn't load */}
@@ -309,29 +298,29 @@ const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurr
               </div>
             ))}
           </div>
-
-          <div className="text-center mt-12">
-            <button className="text-rose-600 font-bold text-lg hover:text-rose-700 transition-colors inline-flex items-center gap-2">
-              Learn more about classes
-              <ArrowRight size={20} />
-            </button>
-          </div>
         </div>
       </section>
 
       {/* Training Programs Section */}
-      <section className="py-24 bg-slate-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-24 text-white overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=1920&h=1080&fit=crop&q=80)` }}
+        >
+          {/* Overlay - lighter so image is visible */}
+          <div className="absolute inset-0 bg-slate-900/65"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 via-slate-800/65 to-slate-900/60"></div>
+        </div>
+        
+        {/* Content */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-4xl font-bold mb-6">Training Programs</h2>
               <p className="text-slate-300 text-lg mb-8 leading-relaxed">
                 Got goals? We'll help you reach them. Whether it's Personal, Team or Performance Training, our certified instructors are here to help you succeed.
               </p>
-              <button className="px-8 py-4 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors inline-flex items-center gap-2">
-                Learn More About Training
-                <ArrowRight size={20} />
-              </button>
             </div>
             <div className="grid grid-cols-2 gap-6">
               {[
@@ -340,7 +329,7 @@ const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurr
                 { title: 'Nutrition Coaching', icon: <Heart size={32} /> },
                 { title: 'Performance Training', icon: <Target size={32} /> }
               ].map((program, idx) => (
-                <div key={idx} className="bg-slate-800 rounded-xl p-6 hover:bg-slate-700 transition-colors">
+                <div key={idx} className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 hover:bg-slate-700/90 transition-colors">
                   <div className="text-rose-500 mb-4">{program.icon}</div>
                   <h3 className="font-bold text-lg">{program.title}</h3>
                 </div>
@@ -393,65 +382,20 @@ const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurr
         </div>
       </section>
 
-      {/* Locations Section */}
-      <section className="py-24 bg-gradient-to-b from-white to-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="mb-12">
-            <h2 className="text-5xl font-bold text-slate-900 mb-4">
-              <span className="text-rose-600">10+</span> LOCATIONS
-            </h2>
-            <p className="text-4xl font-bold text-slate-700 mb-2">ZERO EXCUSES</p>
-            <p className="text-slate-600 text-lg">See what our Clubs have to offer and find a Club near you.</p>
-          </div>
-          <button 
-            onClick={() => setCurrentPage('contact')}
-            className="px-8 py-4 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors inline-flex items-center gap-2"
-          >
-            <MapPin size={20} />
-            Explore Clubs
-          </button>
-        </div>
-      </section>
-
-      {/* Mobile App Section */}
-      <section className="py-24 bg-slate-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Download The Goodlife Mobile App</h2>
-            <p className="text-slate-300 text-lg">Your fitness journey, right in your pocket</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                title: 'WORKOUT BOOKING',
-                description: 'Book your next workout or group fitness class in advance and give yourself the time and space you need to have a great workout.',
-                icon: <Calendar size={32} />
-              },
-              {
-                title: 'DIGITAL CLUB ACCESS',
-                description: 'The app generates a unique barcode, allowing you to scan into any Goodlife Fitness location using only your smartphone.',
-                icon: <Smartphone size={32} />
-              },
-              {
-                title: 'ON-DEMAND WORKOUTS',
-                description: 'From cardio to strength training, we have everything you need to stay fit and motivated, no matter where you are.',
-                icon: <Play size={32} />
-              }
-            ].map((feature, idx) => (
-              <div key={idx} className="bg-slate-800 rounded-xl p-8 hover:bg-slate-700 transition-colors">
-                <div className="text-rose-500 mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-bold mb-4">{feature.title}</h3>
-                <p className="text-slate-300 leading-relaxed">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Newsletter Section */}
-      <section className="py-20 bg-rose-600 text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="relative py-20 text-white overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1920&h=1080&fit=crop&q=80)` }}
+        >
+          {/* Overlay - lighter so image is visible */}
+          <div className="absolute inset-0 bg-rose-600/60"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-rose-900/50 via-rose-600/55 to-rose-900/50"></div>
+        </div>
+        
+        {/* Content */}
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Mail size={48} className="mx-auto mb-6 text-rose-200" />
           <h2 className="text-3xl font-bold mb-4">Get Even More Goodlife</h2>
           <p className="text-rose-100 text-lg mb-8">Subscribe to our newsletter and get the latest updates, fitness info, and nutrition tips right to your inbox.</p>
@@ -482,8 +426,19 @@ const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurr
       </section>
 
       {/* Final Call to Action */}
-      <section className="py-20 bg-rose-600 text-white text-center">
-        <div className="max-w-4xl mx-auto px-4">
+      <section className="relative py-20 text-white text-center overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1920&h=1080&fit=crop&q=80)` }}
+        >
+          {/* Overlay - lighter so image is visible */}
+          <div className="absolute inset-0 bg-rose-600/60"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-rose-900/50 via-rose-600/55 to-rose-900/50"></div>
+        </div>
+        
+        {/* Content */}
+        <div className="relative z-10 max-w-4xl mx-auto px-4">
           <h2 className="text-4xl font-bold mb-6">Ready to Start Your Journey?</h2>
           <p className="text-xl text-rose-100 mb-10">Sign up for a membership today and get your first week of personal training for free!</p>
           <button 

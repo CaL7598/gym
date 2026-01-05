@@ -62,3 +62,6 @@ export const INITIAL_GALLERY = [
   { id: 'img2', url: 'https://picsum.photos/800/600?random=2', caption: 'Heavy weight lifting area' },
   { id: 'img3', url: 'https://picsum.photos/800/600?random=3', caption: 'Spinning class studio' },
 ];
+
+// Mobile Money Payment Configuration
+export const MOBILE_MONEY_NUMBER = '0551336976'; // Main mobile money number for payments
