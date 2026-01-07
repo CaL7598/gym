@@ -286,21 +286,21 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
     <div className="space-y-6">
       {/* Pending Payment Notifications */}
       {pendingPayments.length > 0 && (
-        <div className={`rounded-xl border-2 p-4 ${
+        <div className={`rounded-xl border-2 p-3 sm:p-4 ${
           pendingMemberPayments.length > 0
             ? 'bg-amber-50 border-amber-300'
             : 'bg-blue-50 border-blue-300'
         }`}>
-          <div className="flex items-start gap-4">
-            <div className={`p-2 rounded-lg ${
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className={`p-2 rounded-lg shrink-0 ${
               pendingMemberPayments.length > 0
                 ? 'bg-amber-100 text-amber-600'
                 : 'bg-blue-100 text-blue-600'
             }`}>
-              <Bell size={24} />
+              <Bell size={20} />
             </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-slate-900 mb-1 flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-slate-900 mb-1 flex flex-wrap items-center gap-2 text-sm sm:text-base">
                 {pendingMemberPayments.length > 0 ? (
                   <>
                     <UserPlus size={18} />
@@ -313,7 +313,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
                   </>
                 )}
               </h3>
-              <p className="text-sm text-slate-600 mb-3">
+              <p className="text-xs sm:text-sm text-slate-600 mb-2 sm:mb-3">
                 {pendingMemberPayments.length > 0
                   ? `New members have submitted payments and are waiting for confirmation. Once confirmed, they will be added to the members list and receive welcome emails.`
                   : `Mobile Money payments are waiting for verification. Please review and confirm them in the Payments section.`
@@ -327,15 +327,15 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
         </div>
       )}
 
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">System Overview</h2>
-          <p className="text-slate-500 text-sm">Real-time metrics for Goodlife Fitness management.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">System Overview</h2>
+          <p className="text-slate-500 text-xs sm:text-sm">Real-time metrics for Goodlife Fitness management.</p>
         </div>
         <button 
           onClick={handleAiInsights}
           disabled={isGenerating}
-          className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 text-sm font-medium shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 text-sm font-medium shadow-sm w-full sm:w-auto justify-center"
         >
           <TrendingUp size={18} />
           {isGenerating ? 'Analyzing...' : 'Analytics Insights'}
@@ -343,16 +343,16 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
       </div>
 
       {/* Revenue Analytics Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex justify-between items-center mb-6">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
             <div>
-              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <DollarSign size={24} className="text-rose-600" />
-                Revenue Analytics
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+                <DollarSign size={20} className="text-rose-600 shrink-0" />
+                <span>Revenue Analytics</span>
               </h3>
-              <p className="text-sm text-slate-500 mt-1">Track revenue across different time periods</p>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">Track revenue across different time periods</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => setShowCustomRange(!showCustomRange)}
                 className="flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
@@ -365,8 +365,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
 
           {/* Custom Date Range Picker */}
           {showCustomRange && (
-            <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-700 mb-1">Start Date</label>
                   <input
@@ -420,7 +420,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
           )}
 
           {/* Revenue Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="bg-gradient-to-br from-rose-50 to-rose-100 p-4 rounded-xl border border-rose-200">
               <p className="text-xs font-semibold text-rose-700 uppercase tracking-wider mb-1">Total Revenue</p>
               <p className="text-2xl font-bold text-rose-900">₵{revenueData.totalRevenue.toLocaleString()}</p>
@@ -539,12 +539,12 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Chart */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <TrendingUp size={18} className="text-slate-400" />
-              Member Distribution
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 className="font-bold text-slate-800 mb-4 sm:mb-6 flex items-center gap-2 text-sm sm:text-base">
+              <TrendingUp size={18} className="text-slate-400 shrink-0" />
+              <span>Member Distribution</span>
             </h3>
-            <div className="h-[250px] w-full" style={{ minWidth: 0, minHeight: 250, width: '100%' }}>
+            <div className="h-[200px] sm:h-[250px] w-full overflow-x-auto" style={{ minWidth: 0, minHeight: 200, width: '100%' }}>
               <ResponsiveContainer width="100%" height={250} minWidth={0}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -562,17 +562,17 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
 
           {/* New Super Admin Feature: Team Presence Monitoring */}
           {role === UserRole.SUPER_ADMIN && (
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                  <Activity size={18} className="text-rose-500" />
-                  Team Presence & Monitoring
+            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm sm:text-base">
+                  <Activity size={18} className="text-rose-500 shrink-0" />
+                  <span>Team Presence & Monitoring</span>
                 </h3>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-1 rounded">
                   Live Status
                 </span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {staff
                   .filter(employee => 
                     employee.email !== 'kojo@goodlife.com' && 
@@ -582,28 +582,28 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
                   .map((employee) => {
                   const status = getStaffStatus(employee.email);
                   return (
-                    <div key={employee.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50/30 flex items-center justify-between group hover:border-rose-200 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs ${status.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
+                    <div key={employee.id} className="p-3 sm:p-4 rounded-xl border border-slate-100 bg-slate-50/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group hover:border-rose-200 transition-colors">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                        <div className="relative shrink-0">
+                          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs ${status.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
                             {employee.fullName.split(' ').map(n => n[0]).join('')}
                           </div>
                           {status.isActive && (
-                            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full animate-pulse"></div>
+                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 border-2 border-white rounded-full animate-pulse"></div>
                           )}
                         </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">{employee.fullName}</p>
-                          <p className="text-[10px] text-slate-500">{employee.position}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">{employee.fullName}</p>
+                          <p className="text-[10px] text-slate-500 truncate">{employee.position}</p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right w-full sm:w-auto">
                         <div className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full inline-block ${status.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
                           {status.isActive ? 'On Shift' : 'Inactive'}
                         </div>
-                        <p className="text-[9px] text-slate-400 mt-1 flex items-center justify-end gap-1">
-                          <Clock size={10} />
-                          {status.isActive ? 'Active since ' + status.lastSeen : 'Last seen ' + status.lastSeen}
+                        <p className="text-[9px] text-slate-400 mt-1 flex items-center gap-1">
+                          <Clock size={10} className="shrink-0" />
+                          <span className="truncate">{status.isActive ? 'Active since ' + status.lastSeen : 'Last seen ' + status.lastSeen}</span>
                         </p>
                       </div>
                     </div>
@@ -615,10 +615,10 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
         </div>
 
         {/* AI Insight Sidebar */}
-        <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg relative overflow-hidden h-fit">
+        <div className="bg-slate-900 text-white p-4 sm:p-6 rounded-xl shadow-lg relative overflow-hidden h-fit">
           <div className="relative z-10 h-full flex flex-col">
-            <div className="flex items-center gap-2 mb-4 text-rose-400">
-              <TrendingUp size={24} />
+            <div className="flex items-center gap-2 mb-3 sm:mb-4 text-rose-400">
+              <TrendingUp size={20} className="shrink-0" />
               <h3 className="font-bold uppercase tracking-wider text-xs">Business Analytics</h3>
             </div>
             <div className="flex-1">

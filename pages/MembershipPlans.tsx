@@ -71,12 +71,12 @@ const MembershipPlans: React.FC<MembershipPlansProps> = ({ setCurrentPage, selec
           <p className="text-sm text-slate-500 mt-2">Registration Fee: <span className="font-bold text-rose-600">₵100</span> (one-time, not applicable for day passes)</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
           {plans.map((plan) => (
             <div 
               key={plan.name} 
               className={`relative bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col ${
-                plan.recommended ? 'border-2 border-rose-500 scale-105 z-10' : 'border border-slate-200'
+                plan.recommended ? 'border-2 border-rose-500 lg:scale-105 z-10' : 'border border-slate-200'
               }`}
             >
               {plan.recommended && (
@@ -84,11 +84,11 @@ const MembershipPlans: React.FC<MembershipPlansProps> = ({ setCurrentPage, selec
                   Most Popular
                 </div>
               )}
-              <div className="p-8">
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
+              <div className="p-4 sm:p-6 lg:p-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
                 <div className="flex items-baseline mb-2">
-                  <span className="text-4xl font-bold">₵{plan.price}</span>
-                  <span className="text-slate-500 ml-1">/{plan.period}</span>
+                  <span className="text-3xl sm:text-4xl font-bold">₵{plan.price}</span>
+                  <span className="text-slate-500 ml-1 text-sm sm:text-base">/{plan.period}</span>
                 </div>
                 {plan.registrationFee !== '0' && (
                   <p className="text-sm text-slate-500 mb-4">

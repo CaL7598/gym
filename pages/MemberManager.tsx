@@ -549,44 +549,45 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="text-slate-500 text-xs font-bold uppercase tracking-wider bg-slate-50/50">
-                <th className="px-6 py-4">Member</th>
-                <th className="px-6 py-4">Subscription</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Contact</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-4 lg:px-6 py-3 lg:py-4">Member</th>
+                <th className="px-4 lg:px-6 py-3 lg:py-4">Subscription</th>
+                <th className="px-4 lg:px-6 py-3 lg:py-4">Status</th>
+                <th className="px-4 lg:px-6 py-3 lg:py-4">Contact</th>
+                <th className="px-4 lg:px-6 py-3 lg:py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredMembers.map((member) => (
                 <tr key={member.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4">
+                  <td className="px-4 lg:px-6 py-3 lg:py-4">
                     <div className="flex items-center gap-3">
                       {member.photo ? (
                         <img 
                           src={member.photo} 
                           alt={member.fullName}
-                          className="w-20 h-20 rounded-full object-cover border-2 border-slate-200"
+                          className="w-16 h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 border-slate-200 shrink-0"
                         />
                       ) : (
-                        <div className="w-20 h-20 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center">
-                          <User size={32} className="text-slate-400" />
+                        <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center shrink-0">
+                          <User size={24} className="text-slate-400 lg:w-8 lg:h-8" />
                         </div>
                       )}
-                      <div>
-                        <div className="font-bold text-slate-900">{member.fullName}</div>
-                        <div className="text-xs text-slate-400">ID: {member.id}</div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-900 text-sm lg:text-base truncate">{member.fullName}</div>
+                        <div className="text-xs text-slate-400 truncate">ID: {member.id.slice(0, 8)}...</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 lg:px-6 py-3 lg:py-4">
                     <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-100 text-slate-700">{member.plan}</span>
                     <div className="text-[10px] text-slate-400 mt-1">Exp: {member.expiryDate}</div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 lg:px-6 py-3 lg:py-4">
                     <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
                       member.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
                       member.status === 'expiring' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
@@ -594,11 +595,11 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                       {member.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-slate-600">{member.phone}</div>
-                    <div className="text-xs text-slate-400">{member.email}</div>
+                  <td className="px-4 lg:px-6 py-3 lg:py-4">
+                    <div className="text-xs lg:text-sm text-slate-600 truncate">{member.phone}</div>
+                    <div className="text-xs text-slate-400 truncate">{member.email}</div>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-4 lg:px-6 py-3 lg:py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button 
                         onClick={() => handleEditClick(member)}
@@ -620,12 +621,73 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-4 p-4">
+          {filteredMembers.map((member) => (
+            <div key={member.id} className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                {member.photo ? (
+                  <img 
+                    src={member.photo} 
+                    alt={member.fullName}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-slate-200 shrink-0"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center shrink-0">
+                    <User size={24} className="text-slate-400" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-slate-900 text-base">{member.fullName}</div>
+                  <div className="text-xs text-slate-400 mt-1">ID: {member.id.slice(0, 8)}...</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleEditClick(member)}
+                    className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                    title={role === UserRole.STAFF ? 'Upload Photo' : 'Edit Member'}
+                  >
+                    <Edit2 size={18} />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(member.id)}
+                    className={`p-2 text-slate-400 transition-colors ${role === UserRole.SUPER_ADMIN ? 'hover:text-rose-600' : 'opacity-30 cursor-not-allowed'}`}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Subscription</div>
+                  <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-100 text-slate-700">{member.plan}</span>
+                  <div className="text-[10px] text-slate-400 mt-1">Exp: {member.expiryDate}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Status</div>
+                  <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full inline-block ${
+                    member.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                    member.status === 'expiring' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+                  }`}>
+                    {member.status}
+                  </span>
+                </div>
+              </div>
+              <div className="pt-3 border-t border-slate-100">
+                <div className="text-xs text-slate-500 mb-1">Contact</div>
+                <div className="text-sm text-slate-600">{member.phone}</div>
+                <div className="text-xs text-slate-400 truncate">{member.email}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Add Member Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 fade-in duration-200 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 fade-in duration-200 flex flex-col max-h-[95vh] sm:max-h-[90vh]">
             <div className="flex items-center justify-between p-4 border-b shrink-0">
               <h3 className="text-base font-bold text-slate-900">New Registration</h3>
               <button onClick={() => {
@@ -771,8 +833,8 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
       {/* Edit Member Modal */}
       {showEditModal && editingMember && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 fade-in duration-200 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 fade-in duration-200 flex flex-col max-h-[95vh] sm:max-h-[90vh]">
             <div className="flex items-center justify-between p-4 border-b shrink-0">
               <h3 className="text-base font-bold text-slate-900">
                 {role === UserRole.STAFF ? 'Upload Member Photo' : 'Edit Member Information'}
@@ -967,8 +1029,8 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
       {/* Bulk Import Modal */}
       {showBulkImportModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Bulk Import Members</h3>

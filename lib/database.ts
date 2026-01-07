@@ -10,7 +10,8 @@ import {
   SubscriptionPlan,
   PaymentMethod,
   PaymentStatus,
-  UserRole
+  UserRole,
+  Privilege
 } from '../types';
 
 // Members
@@ -160,19 +161,111 @@ export const staffService = {
     return data ? mapStaffFromDB(data) : null;
   },
 
-  async update(id: string, updates: Partial<StaffMember>): Promise<StaffMember> {
+  async update(id: string, updates: Partial<StaffMember>, retries: number = 3): Promise<StaffMember> {
+    let lastError: any = null;
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const { data, error } = await supabase
+          .from('staff')
+          .update({
+            ...mapStaffToDB(updates),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select()
+          .single();
+        
+        if (error) {
+          lastError = error;
+          console.warn(`⚠️ Attempt ${attempt}/${retries} failed:`, error);
+          
+          // If it's a network error and we have retries left, wait and retry
+          if (attempt < retries && (error.message?.includes('fetch') || error.message?.includes('network'))) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+            continue;
+          }
+          
+          throw error;
+        }
+        
+        console.log(`✅ Staff updated successfully on attempt ${attempt}`);
+        return mapStaffFromDB(data);
+      } catch (error: any) {
+        lastError = error;
+        
+        // If it's a network error and we have retries left, retry
+        if (attempt < retries && (error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('Failed to fetch'))) {
+          console.warn(`⚠️ Network error on attempt ${attempt}, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
+        
+        // If it's the last attempt or not a network error, throw
+        if (attempt === retries) {
+          console.error('❌ Error updating staff after all retries:', error);
+          throw error;
+        }
+      }
+    }
+    
+    throw lastError || new Error('Failed to update staff after retries');
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('staff')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting staff:', error);
+      throw error;
+    }
+  },
+
+  async deleteByEmail(email: string): Promise<void> {
+    const { error } = await supabase
+      .from('staff')
+      .delete()
+      .eq('email', email);
+    
+    if (error) {
+      console.error('Error deleting staff by email:', error);
+      throw error;
+    }
+  },
+
+  async create(staffData: Partial<StaffMember> & { password: string }): Promise<StaffMember> {
+    const dbData = mapStaffToDB(staffData);
+    dbData.password = staffData.password; // Include password in database insert
+    
     const { data, error } = await supabase
       .from('staff')
-      .update({
-        ...mapStaffToDB(updates),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
+      .insert(dbData)
       .select()
       .single();
     
     if (error) {
-      console.error('Error updating staff:', error);
+      console.error('Error creating staff:', error);
+      throw error;
+    }
+    
+    return mapStaffFromDB(data);
+  },
+
+  async create(staffData: Partial<StaffMember> & { password: string }): Promise<StaffMember> {
+    const dbData = mapStaffToDB(staffData);
+    dbData.password = staffData.password; // Include password in database insert
+    
+    const { data, error } = await supabase
+      .from('staff')
+      .insert(dbData)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating staff:', error);
       throw error;
     }
     
@@ -327,6 +420,22 @@ export const galleryService = {
     
     if (error) {
       console.error('Error creating gallery image:', error);
+      throw error;
+    }
+    
+    return mapGalleryFromDB(data);
+  },
+
+  async update(id: string, updates: Partial<GalleryImage>): Promise<GalleryImage> {
+    const { data, error } = await supabase
+      .from('gallery')
+      .update(mapGalleryToDB(updates as GalleryImage))
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating gallery image:', error);
       throw error;
     }
     
@@ -519,6 +628,49 @@ function mapMemberToDB(member: Partial<Member>): any {
 }
 
 function mapStaffFromDB(db: any): StaffMember {
+  let privileges: Privilege[] | undefined = undefined;
+  
+  if (db.privileges) {
+    try {
+      const parsed = JSON.parse(db.privileges);
+      
+      // Ensure it's an array and not empty, and cast to Privilege enum
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Validate and cast each privilege to ensure they're valid enum values
+        const validPrivileges = parsed
+          .filter((p): p is Privilege => {
+            const isValid = typeof p === 'string' && Object.values(Privilege).includes(p as Privilege);
+            if (!isValid) {
+              console.warn('⚠️ Invalid privilege filtered out:', p, 'for staff:', db.email);
+            }
+            return isValid;
+          })
+          .map(p => p as Privilege);
+        
+        privileges = validPrivileges;
+        
+        // Log if any privileges were filtered out
+        if (parsed.length !== privileges.length) {
+          console.warn('⚠️ Some invalid privileges were filtered out for', db.email, ':', {
+            original: parsed,
+            valid: privileges,
+            filteredCount: parsed.length - privileges.length
+          });
+        }
+        
+        // Log successful privilege mapping for debugging
+        if (privileges.length > 0) {
+          console.log('✅ Loaded privileges for', db.email, ':', privileges);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error parsing privileges for', db.email, ':', error, {
+        rawValue: db.privileges
+      });
+      privileges = undefined;
+    }
+  }
+  
   return {
     id: db.id,
     fullName: db.full_name,
@@ -527,11 +679,11 @@ function mapStaffFromDB(db: any): StaffMember {
     position: db.position,
     phone: db.phone,
     avatar: db.avatar,
-    privileges: db.privileges ? JSON.parse(db.privileges) : undefined
+    privileges
   };
 }
 
-function mapStaffToDB(staff: Partial<StaffMember>): any {
+function mapStaffToDB(staff: Partial<StaffMember> & { password?: string }): any {
   const db: any = {};
   if (staff.fullName !== undefined) db.full_name = staff.fullName;
   if (staff.email !== undefined) db.email = staff.email;
@@ -539,7 +691,22 @@ function mapStaffToDB(staff: Partial<StaffMember>): any {
   if (staff.position !== undefined) db.position = staff.position;
   if (staff.phone !== undefined) db.phone = staff.phone;
   if (staff.avatar !== undefined) db.avatar = staff.avatar;
-  if (staff.privileges !== undefined) db.privileges = JSON.stringify(staff.privileges);
+  if (staff.password !== undefined) db.password = staff.password;
+  if (staff.privileges !== undefined) {
+    // Only save if it's a non-empty array, otherwise save as null
+    if (Array.isArray(staff.privileges) && staff.privileges.length > 0) {
+      const privilegesToSave = staff.privileges.map(p => String(p));
+      db.privileges = JSON.stringify(privilegesToSave);
+      console.log('💾 Mapping privileges to DB:', {
+        original: staff.privileges,
+        stringified: db.privileges,
+        count: staff.privileges.length
+      });
+    } else {
+      db.privileges = null;
+      console.log('💾 No privileges to save (empty or null)');
+    }
+  }
   return db;
 }
 

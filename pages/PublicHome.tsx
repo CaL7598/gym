@@ -27,7 +27,7 @@ const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurr
   return (
     <div className="flex flex-col">
       {/* Hero Section with Video Background */}
-      <section className="relative h-[85vh] flex items-center overflow-hidden">
+      <section className="relative h-[70vh] sm:h-[80vh] lg:h-[85vh] flex items-center overflow-hidden">
         {/* Video Background */}
         <div className="absolute inset-0 bg-slate-900">
           <video
@@ -75,7 +75,7 @@ const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurr
             
             {/* Animated Headline */}
             <h1 
-              className="text-5xl md:text-7xl lg:text-8xl font-extrabold leading-tight mb-6 animate-fade-in-up"
+              className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-extrabold leading-tight mb-4 sm:mb-6 animate-fade-in-up px-4"
               style={{
                 animation: 'fadeInUp 0.8s ease-out 0.4s both'
               }}
@@ -93,7 +93,7 @@ const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurr
             
             {/* Animated Description */}
             <p 
-              className="text-lg md:text-xl lg:text-2xl text-slate-200 mb-10 leading-relaxed max-w-3xl mx-auto animate-fade-in-up"
+              className="text-base sm:text-lg md:text-xl lg:text-2xl text-slate-200 mb-6 sm:mb-10 leading-relaxed max-w-3xl mx-auto animate-fade-in-up px-4"
               style={{
                 animation: 'fadeInUp 0.8s ease-out 0.8s both'
               }}
@@ -160,14 +160,14 @@ const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurr
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-white">
+      <section className="py-12 sm:py-16 lg:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Choose Goodlife?</h2>
-            <p className="text-slate-600 max-w-2xl mx-auto">We provide everything you need to reach your fitness goals, from beginner to elite levels.</p>
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3 sm:mb-4">Why Choose Goodlife?</h2>
+            <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">We provide everything you need to reach your fitness goals, from beginner to elite levels.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 sm:gap-10 lg:gap-12">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mb-6">
                 <Zap size={32} />

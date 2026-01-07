@@ -1,29 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Get Supabase URL and anon key from environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Log connection status (without exposing the key)
-if (supabaseUrl && supabaseAnonKey) {
-  console.log('✅ Supabase configured:', {
-    url: supabaseUrl,
-    keyPresent: supabaseAnonKey ? 'Yes' : 'No',
-    keyLength: supabaseAnonKey.length
-  });
-} else {
-  console.warn('⚠️ Supabase not configured:', {
-    url: supabaseUrl ? 'Present' : 'Missing',
-    key: supabaseAnonKey ? 'Present' : 'Missing'
-  });
-  console.warn('Please check your .env file and restart the dev server.');
-}
-
-// Create and export the Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+  },
+  db: {
+    schema: 'public',
+  },
+  global: {
+    headers: {
+      'x-client-info': 'goodlife-fitness-gym@1.0.0',
+    },
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
   },
 });
 

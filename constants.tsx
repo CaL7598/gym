@@ -32,14 +32,13 @@ export const NAVIGATION_ITEMS = [
   { id: 'checkins', label: 'Client Check-Ins', icon: <LogIn size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'communications', label: 'Comms', icon: <MessageSquare size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'activity-logs', label: 'Activity Logs', icon: <History size={20} />, roles: [UserRole.SUPER_ADMIN] },
+  { id: 'staff', label: 'Staff', icon: <UserCircle size={20} />, roles: [UserRole.SUPER_ADMIN] },
   { id: 'content', label: 'Website CMS', icon: <ImageIcon size={20} />, roles: [UserRole.SUPER_ADMIN] },
   { id: 'settings', label: 'Settings', icon: <Settings size={20} />, roles: [UserRole.SUPER_ADMIN] },
 ];
 
 export const INITIAL_STAFF = [
   { id: 's1', fullName: 'Kwame Admin', email: 'admin@goodlife.com', role: UserRole.SUPER_ADMIN, position: 'Owner / Manager', phone: '0244000111' },
-  { id: 's2', fullName: 'Amara Staff', email: 'staff@goodlife.com', role: UserRole.STAFF, position: 'Front Desk Officer', phone: '0244222333' },
-  { id: 's3', fullName: 'Kojo Trainer', email: 'kojo@goodlife.com', role: UserRole.STAFF, position: 'Head Fitness Coach', phone: '0244333444' },
 ];
 
 export const INITIAL_MEMBERS = [

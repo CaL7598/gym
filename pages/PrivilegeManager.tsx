@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { StaffMember, UserRole, Privilege } from '../types';
 import { Shield, Check, X, User, Save, AlertCircle } from 'lucide-react';
 import { PRIVILEGE_DESCRIPTIONS, getPrivilegesByCategory } from '../lib/privileges';
+import { useToast } from '../contexts/ToastContext';
+import ConfirmModal from '../components/ConfirmModal';
+import { staffService } from '../lib/database';
 
 interface PrivilegeManagerProps {
   staff: StaffMember[];
@@ -16,7 +19,7 @@ const PrivilegeManager: React.FC<PrivilegeManagerProps> = ({
   role,
   logActivity 
 }) => {
-  const { showSuccess } = useToast();
+  const { showSuccess, showError } = useToast();
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [editingPrivileges, setEditingPrivileges] = useState<Set<Privilege>>(new Set());
   const [hasChanges, setHasChanges] = useState(false);
@@ -78,43 +81,102 @@ const PrivilegeManager: React.FC<PrivilegeManagerProps> = ({
   const handleSave = async () => {
     if (!selectedStaff) return;
 
-    const updatedStaff = staff.map(s => 
-      s.id === selectedStaffId 
-        ? { ...s, privileges: Array.from(editingPrivileges) }
-        : s
-    );
-
-    setStaff(updatedStaff);
-    setHasChanges(false);
-
-    // Log activity
-    if (logActivity) {
-      const privilegeCount = editingPrivileges.size;
-      logActivity(
-        'Update Staff Privileges',
-        `Updated privileges for ${selectedStaff.fullName}: ${privilegeCount} privilege(s) assigned`,
-        'admin'
-      );
-    }
-
     // Save to database if configured
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     
-    if (supabaseUrl && supabaseKey) {
-      try {
-        // Update staff member in database
-        const { staffService } = await import('../lib/database');
-        await staffService.update(selectedStaffId, {
-          privileges: Array.from(editingPrivileges)
+    try {
+      if (supabaseUrl && supabaseKey) {
+        // Convert Set to Array for saving
+        const privilegesArray = Array.from(editingPrivileges);
+        console.log('💾 Saving privileges:', {
+          staffId: selectedStaffId,
+          staffName: selectedStaff.fullName,
+          privilegesToSave: privilegesArray,
+          privilegesCount: privilegesArray.length
         });
-        console.log('✅ Privileges saved to database');
-      } catch (error) {
-        console.error('Error saving privileges to database:', error);
+        
+        // Update staff member in database
+        const updated = await staffService.update(selectedStaffId, {
+          privileges: privilegesArray
+        });
+        
+        console.log('✅ Staff updated in database:', {
+          id: updated.id,
+          email: updated.email,
+          savedPrivileges: updated.privileges,
+          savedCount: updated.privileges?.length || 0
+        });
+        
+        // Reload all staff from database to ensure sync
+        const allStaff = await staffService.getAll();
+        console.log('🔄 Reloaded all staff from database:', allStaff.length, 'staff members');
+        
+        // Find the updated staff member in the reloaded data
+        const updatedStaffMember = allStaff.find(s => s.id === selectedStaffId);
+        console.log('📋 Updated staff member after reload:', {
+          name: updatedStaffMember?.fullName,
+          email: updatedStaffMember?.email,
+          id: updatedStaffMember?.id,
+          privileges: updatedStaffMember?.privileges,
+          privilegesCount: updatedStaffMember?.privileges?.length || 0,
+          privilegesType: typeof updatedStaffMember?.privileges,
+          isArray: Array.isArray(updatedStaffMember?.privileges)
+        });
+        
+        // Update the staff array
+        setStaff(allStaff);
+        console.log('✅ Staff array updated in App.tsx');
+      } else {
+        // Local state only - update directly
+        const updatedStaff = staff.map(s => 
+          s.id === selectedStaffId 
+            ? { ...s, privileges: Array.from(editingPrivileges) }
+            : s
+        );
+        setStaff(updatedStaff);
+      }
+
+      setHasChanges(false);
+
+      // Log activity
+      if (logActivity) {
+        const privilegeCount = editingPrivileges.size;
+        logActivity(
+          'Update Staff Privileges',
+          `Updated privileges for ${selectedStaff.fullName}: ${privilegeCount} privilege(s) assigned`,
+          'admin'
+        );
+      }
+
+      showSuccess(`Privileges updated successfully for ${selectedStaff.fullName}`);
+    } catch (error: any) {
+      console.error('Error saving privileges:', error);
+      
+      // Check if it's a network error
+      const isNetworkError = error?.message?.includes('fetch') || 
+                            error?.message?.includes('network') || 
+                            error?.message?.includes('Failed to fetch') ||
+                            error?.message?.includes('ERR_CONNECTION_CLOSED');
+      
+      if (isNetworkError) {
+        // Update local state anyway so the UI reflects the change
+        const updatedStaff = staff.map(s => 
+          s.id === selectedStaffId 
+            ? { ...s, privileges: Array.from(editingPrivileges) }
+            : s
+        );
+        setStaff(updatedStaff);
+        
+        showError(
+          'Network error: Could not save to database. ' +
+          'Privileges have been updated locally. ' +
+          'Please check your internet connection and try saving again, or refresh the page.'
+        );
+      } else {
+        showError(error.message || 'Failed to save privileges. Please try again.');
       }
     }
-
-    showSuccess(`Privileges updated successfully for ${selectedStaff.fullName}`);
   };
 
   const handleReset = () => {

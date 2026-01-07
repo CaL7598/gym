@@ -56,6 +56,7 @@ import AdminLogin from './pages/AdminLogin';
 import ActivityLogs from './pages/ActivityLogs';
 import AttendanceManager from './pages/AttendanceManager';
 import PrivilegeManager from './pages/PrivilegeManager';
+import StaffManager from './pages/StaffManager';
 import CheckIn from './pages/CheckIn';
 import CheckInManager from './pages/CheckInManager';
 
@@ -437,9 +438,13 @@ const App: React.FC = () => {
         case 'content': return <ContentManager 
           announcements={announcements} 
           setAnnouncements={setAnnouncements} 
-          gallery={gallery} 
-          setGallery={setGallery} 
           role={userRole} 
+        />;
+        case 'staff': return <StaffManager 
+          staff={staff} 
+          setStaff={setStaff} 
+          role={userRole}
+          logActivity={logActivity}
         />;
         case 'settings': return <PrivilegeManager 
           staff={staff} 

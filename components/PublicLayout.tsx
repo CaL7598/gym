@@ -25,10 +25,10 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, setCurrentPage, c
     <div className="flex flex-col min-h-screen">
       <header className="bg-white border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentPage('home')}>
-              <Dumbbell className="text-rose-600 h-8 w-8" />
-              <span className="text-xl font-bold text-slate-900 tracking-tight">GOODLIFE <span className="text-rose-600">FITNESS</span></span>
+          <div className="flex justify-between items-center h-14 sm:h-16">
+            <div className="flex items-center gap-1.5 sm:gap-2 cursor-pointer" onClick={() => setCurrentPage('home')}>
+              <Dumbbell className="text-rose-600 h-6 w-6 sm:h-8 sm:w-8" />
+              <span className="text-base sm:text-xl font-bold text-slate-900 tracking-tight">GOODLIFE <span className="text-rose-600">FITNESS</span></span>
             </div>
 
             {/* Desktop Nav */}

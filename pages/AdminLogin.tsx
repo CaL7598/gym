@@ -49,11 +49,6 @@ const AdminLogin: React.FC<LoginProps> = ({ onLogin, logActivity }) => {
         logActivity('Portal Login', `Super Admin (${email}) logged in successfully`, 'access');
         setIsLoading(false);
         return;
-      } else if (email === 'staff@goodlife.com' && password === 'staff123') {
-        onLogin(UserRole.STAFF, email);
-        logActivity('Portal Login', `Staff Member (${email}) logged in successfully`, 'access');
-        setIsLoading(false);
-        return;
       }
 
       setError('Invalid credentials. Please check your email and password.');

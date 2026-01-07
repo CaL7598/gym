@@ -74,11 +74,11 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 animate-in zoom-in-95 fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-lg shadow-2xl max-w-md w-full animate-in zoom-in-95 fade-in duration-200">
         {/* Header */}
-        <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 rounded-t-lg flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
+        <div className="bg-slate-100 px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-200 rounded-t-lg flex items-center justify-between">
+          <h3 className="text-xs sm:text-sm font-semibold text-slate-700">{title}</h3>
           <button
             onClick={onCancel}
             className="text-slate-400 hover:text-slate-600 transition-colors"
@@ -89,28 +89,28 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6">
-          <div className="flex items-start gap-4">
+        <div className="p-4 sm:p-6">
+          <div className="flex items-start gap-3 sm:gap-4">
             <div className={`${styles.iconBg} rounded-full p-2 flex-shrink-0`}>
-              <AlertTriangle className={styles.iconColor} size={24} />
+              <AlertTriangle className={styles.iconColor} size={20} />
             </div>
-            <div className="flex-1 text-slate-700 text-sm leading-relaxed">
+            <div className="flex-1 text-slate-700 text-xs sm:text-sm leading-relaxed min-w-0">
               {formatMessage(message)}
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 rounded-b-lg flex justify-end gap-3">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border-t border-slate-200 rounded-b-lg flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
           <button
             onClick={onConfirm}
-            className={`${styles.confirmBg} ${styles.confirmText} px-6 py-2 rounded font-medium transition-colors`}
+            className={`${styles.confirmBg} ${styles.confirmText} px-4 sm:px-6 py-2 rounded font-medium transition-colors text-sm sm:text-base w-full sm:w-auto`}
           >
             {confirmText}
           </button>
           <button
             onClick={onCancel}
-            className={`${styles.cancelBg} ${styles.cancelText} px-6 py-2 rounded font-medium transition-colors`}
+            className={`${styles.cancelBg} ${styles.cancelText} px-4 sm:px-6 py-2 rounded font-medium transition-colors text-sm sm:text-base w-full sm:w-auto`}
           >
             {cancelText}
           </button>

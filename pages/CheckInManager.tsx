@@ -285,21 +285,21 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({ checkIns, setCheckIns }
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Phone</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Check-In</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Check-Out</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Duration</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">Actions</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Date</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Name</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider hidden sm:table-cell">Phone</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">Email</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Check-In</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Check-Out</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider hidden lg:table-cell">Duration</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                <th className="px-3 sm:px-4 lg:px-6 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {filteredCheckIns.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={9} className="px-4 sm:px-6 py-12 text-center text-slate-500">
                     No check-ins found
                   </td>
                 </tr>
@@ -311,47 +311,47 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({ checkIns, setCheckIns }
 
                   return (
                     <tr key={ci.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-900">
                         {formatDate(ci.date)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                      <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-slate-900">
                         {ci.fullName}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                      <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-600 hidden sm:table-cell">
                         {ci.phone}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                      <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-600 hidden md:table-cell">
                         {ci.email || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                      <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-600">
                         <div className="flex items-center gap-1">
-                          <LogIn size={14} className="text-emerald-600" />
-                          {formatTime(ci.checkInTime)}
+                          <LogIn size={12} className="text-emerald-600 shrink-0" />
+                          <span>{formatTime(ci.checkInTime)}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                      <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-600">
                         {ci.checkOutTime ? (
                           <div className="flex items-center gap-1">
-                            <LogOut size={14} className="text-rose-600" />
-                            {formatTime(ci.checkOutTime)}
+                            <LogOut size={12} className="text-rose-600 shrink-0" />
+                            <span>{formatTime(ci.checkOutTime)}</span>
                           </div>
                         ) : (
                           '-'
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                      <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-600 hidden lg:table-cell">
                         {duration !== null ? `${duration} min` : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                      <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold ${
                           ci.checkOutTime
                             ? 'bg-slate-100 text-slate-700'
                             : 'bg-emerald-100 text-emerald-700'
                         }`}>
-                          {ci.checkOutTime ? 'Checked Out' : 'Checked In'}
+                          {ci.checkOutTime ? 'Out' : 'In'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-xs sm:text-sm">
                         <button
                           onClick={() => handleDelete(ci.id)}
                           className="text-rose-600 hover:text-rose-700 font-medium"

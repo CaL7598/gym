@@ -16,7 +16,9 @@ export const hasPrivilege = (
 
   // Staff members need explicit privilege assignment
   if (userRole === UserRole.STAFF && staffMember?.privileges) {
-    return staffMember.privileges.includes(privilege);
+    // Compare both as strings to handle any type mismatches
+    const privilegeStr = String(privilege);
+    return staffMember.privileges.some(p => String(p) === privilegeStr);
   }
 
   return false;
@@ -68,19 +70,9 @@ export const PRIVILEGE_DESCRIPTIONS: Record<Privilege, { label: string; descript
     description: 'Approve and confirm pending mobile money payments',
     category: 'Payment Management'
   },
-  [Privilege.MANAGE_CONTENT]: {
-    label: 'Manage Website Content',
-    description: 'Access website CMS to manage announcements and gallery',
-    category: 'Content Management'
-  },
   [Privilege.MANAGE_ANNOUNCEMENTS]: {
     label: 'Manage Announcements',
     description: 'Create, edit, and delete announcements',
-    category: 'Content Management'
-  },
-  [Privilege.MANAGE_GALLERY]: {
-    label: 'Manage Gallery',
-    description: 'Upload, edit, and delete gallery images',
     category: 'Content Management'
   },
   [Privilege.VIEW_ACTIVITY_LOGS]: {

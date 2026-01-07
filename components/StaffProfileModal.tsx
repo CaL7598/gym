@@ -116,26 +116,28 @@ const StaffProfileModal: React.FC<StaffProfileModalProps> = ({
               </div>
             </div>
 
-            {staff.privileges && staff.privileges.length > 0 && (
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-slate-100 rounded-lg">
-                  <ShieldCheck className="text-slate-600" size={18} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Privileges</p>
+            <div className="flex items-start gap-4">
+              <div className="p-2 bg-slate-100 rounded-lg">
+                <ShieldCheck className="text-slate-600" size={18} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Privileges</p>
+                {staff.privileges && Array.isArray(staff.privileges) && staff.privileges.length > 0 ? (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {staff.privileges.map((privilege, index) => (
                       <span
                         key={index}
                         className="px-2 py-1 bg-rose-50 text-rose-700 text-xs rounded-md font-medium"
                       >
-                        {privilege.replace(/_/g, ' ')}
+                        {typeof privilege === 'string' ? privilege.replace(/_/g, ' ') : privilege}
                       </span>
                     ))}
                   </div>
-                </div>
+                ) : (
+                  <p className="text-xs text-slate-400 mt-2 italic">No privileges assigned</p>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
